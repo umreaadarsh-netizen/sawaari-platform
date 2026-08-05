@@ -23,11 +23,12 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-export function receiptId(rideId: string): string {
+type Filter = "all" | "completed" | "cancelled";
+
+/** SW-XXXXXX receipt number for a ride, matching the checkout log. */
+function receiptId(rideId: string): string {
   return `SW-${rideId.slice(-6).toUpperCase()}`;
 }
-
-type Filter = "all" | "completed" | "cancelled";
 
 /**
  * Full trip history log for a rider or driver: every past ride with its date,

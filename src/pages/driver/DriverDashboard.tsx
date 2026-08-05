@@ -34,7 +34,6 @@ import {
   Navigation,
   Pencil,
   Play,
-  Star,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -600,7 +599,23 @@ export default function DriverDashboard() {
                                   )}{" "}
                                   from you
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-emerald-950 transition-colors hover:bg-emerald-400">
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    void handleAccept(r._id);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      void handleAccept(r._id);
+                                    }
+                                  }}
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-emerald-950 transition-all hover:bg-emerald-400 active:scale-95"
+                                >
                                   Accept <ArrowUpCircle className="size-3.5 rotate-45" />
                                 </span>
                               </div>

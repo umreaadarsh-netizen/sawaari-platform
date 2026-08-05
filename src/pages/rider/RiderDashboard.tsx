@@ -22,7 +22,7 @@ import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
 import { ChatPanel } from "@/components/ride/ChatPanel";
-import { TripHistory, receiptId } from "@/components/ride/TripHistory";
+import { TripHistory } from "@/components/ride/TripHistory";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -497,12 +497,9 @@ function BookingView(props: {
   onRequest: () => void;
 }) {
   const {
-    pickup,
-    dropoff,
     pickupText,
     dropoffText,
     activeField,
-    suggestions,
     suggestLoading,
     vehicles,
     vehicleId,
@@ -868,7 +865,7 @@ function RideView({
     ? waDigits(driverPhone)
     : null;
   const waMessage = assigned
-    ? `Hi ${ride.driverName ?? "there"}, this is ${ride.riderName} — booking ${receiptId(ride._id)} is confirmed.\n\nRoute: ${ride.pickup.address} → ${ride.dropoff.address}\nVehicle: ${vehicle?.name ?? "EV rickshaw"} · Fare: ${formatINR(ride.fare)}\nPickup: ${scheduled ? `scheduled for ${format(new Date(ride.scheduledFor!), "h:mm a")}` : "as soon as possible"}\n\nLooking forward to the ride — thank you!`
+    ? `Hi ${ride.driverName ?? "there"}, this is ${ride.riderName} — booking SW-${ride._id.slice(-6).toUpperCase()} is confirmed.\n\nRoute: ${ride.pickup.address} → ${ride.dropoff.address}\nVehicle: ${vehicle?.name ?? "EV rickshaw"} · Fare: ${formatINR(ride.fare)}\nPickup: ${scheduled ? `scheduled for ${format(new Date(ride.scheduledFor!), "h:mm a")}` : "as soon as possible"}\n\nLooking forward to the ride — thank you!`
     : "";
   const waHref =
     waNumber && waMessage
@@ -932,7 +929,7 @@ function RideView({
           </div>
         </div>
       ) : completed ? (
-        <CheckoutCard ride={ride} vehicle={vehicle} userId={userId} />
+        <CheckoutCard ride={ride} vehicle={vehicle} />
       ) : (
         <>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1049,11 +1046,9 @@ const PAY_METHODS = [
 function CheckoutCard({
   ride,
   vehicle,
-  userId,
 }: {
   ride: Doc<"rides">;
   vehicle: FleetVehicle | null;
-  userId: string;
 }) {
   const payRide = useMutation(api.rides.payRide);
   const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
