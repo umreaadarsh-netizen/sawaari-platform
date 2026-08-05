@@ -79,6 +79,12 @@ const schema = defineSchema(
       riderName: v.string(),
       driverName: v.optional(v.string()),
       vehicleNo: v.optional(v.string()),
+      // 4-digit ride-lifecycle codes. pickupOtp is generated when a driver
+      // accepts and shown to the rider; the driver must enter it to start the
+      // trip. completionOtp is generated when the trip starts; the rider shares
+      // it with the driver at drop-off so the trip can be completed.
+      pickupOtp: v.optional(v.string()),
+      completionOtp: v.optional(v.string()),
       createdAt: v.number(),
       acceptedAt: v.optional(v.number()),
       startedAt: v.optional(v.number()),

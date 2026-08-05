@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 import { FleetVehicle, getFleetRates } from "./fleet";
+import type { Doc } from "./_generated/dataModel";
 
 // ---- shared helpers -------------------------------------------------------
 
@@ -38,6 +39,24 @@ const ACTIVE_STATUSES = [
 
 const isActive = (status: string) =>
   (ACTIVE_STATUSES as readonly string[]).includes(status);
+
+/** Random 4-digit ride-lifecycle code (pickup / completion). */
+function genOtp(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+/**
+ * Strip the ride-lifecycle codes from a ride doc. The OTPs are secrets shared
+ * only rider→driver on their phones; driver/admin/history queries must never
+ * leak them through the data layer, or the verification step is meaningless.
+ * (Runtime-only — the doc type keeps the optional fields for the rider view.)
+ */
+export function withoutOtps(ride: Doc<"rides">): Doc<"rides"> {
+  const rest = { ...ride };
+  delete rest.pickupOtp;
+  delete rest.completionOtp;
+  return rest;
+}
 
 /**
  * Dispatch radius for ride requests. A `requested` ride is broadcast (via the
@@ -121,6 +140,8 @@ export const activeRide = query({
     if (!user) return null;
 
     if (side === "rider") {
+      // The rider's view includes the lifecycle codes: they show the pickup
+      // code to their driver and the completion code at drop-off.
       const rides = await ctx.db
         .query("rides")
         .withIndex("by_rider_created", (q) => q.eq("riderId", user._id))
@@ -129,12 +150,14 @@ export const activeRide = query({
       return rides.find((r) => isActive(r.status)) ?? null;
     }
 
+    // The driver never sees the codes through data — they must ask the rider.
     const rides = await ctx.db
       .query("rides")
       .withIndex("by_driver_created", (q) => q.eq("driverId", user._id))
       .order("desc")
       .take(10);
-    return rides.find((r) => isActive(r.status)) ?? null;
+    const ride = rides.find((r) => isActive(r.status));
+    return ride ? withoutOtps(ride) : null;
   },
 });
 
@@ -188,7 +211,10 @@ export const myRides = query({
       seen.add(r._id);
       return true;
     });
-    return merged.sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
+    return merged
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 20)
+      .map((r) => withoutOtps(r));
   },
 });
 
@@ -200,7 +226,7 @@ export const getRide = query({
     const ride = await ctx.db.get(rideId);
     if (!ride) return null;
     if (ride.riderId !== user._id && ride.driverId !== user._id) return null;
-    return ride;
+    return withoutOtps(ride);
   },
 });
 
@@ -252,7 +278,7 @@ export const openRides = query({
       .filter(({ distanceKm }) => distanceKm <= MATCHING_RADIUS_KM)
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 12)
-      .map(({ ride }) => ride);
+      .map(({ ride }) => withoutOtps(ride));
   },
 });
 
@@ -285,12 +311,15 @@ export const acceptRide = mutation({
     // dashboards observe this change through their live queries, so the rider
     // sees the driver card appear and other drivers see the request vanish
     // simultaneously, with no page refresh.
+    // Lock the ride, flip to `matched`, and mint the pickup code the rider
+    // will show on their screen — the driver must enter it to start the trip.
     await ctx.db.patch(rideId, {
       driverId: user._id,
       driverName: driver.name,
       vehicleNo: driver.vehicleNo,
       status: "matched",
       acceptedAt: Date.now(),
+      pickupOtp: genOtp(),
     });
 
     // The matched driver gains a trip on completion; bump the counter now so
@@ -307,8 +336,11 @@ export const updateRideStatus = mutation({
       v.literal("in_progress"),
       v.literal("completed"),
     ),
+    // Required to *start* the trip (pickupOtp) and to *complete* it
+    // (completionOtp). Not required for arriving — the driver simply shows up.
+    otp: v.optional(v.string()),
   },
-  handler: async (ctx, { rideId, status }) => {
+  handler: async (ctx, { rideId, status, otp }) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Please sign in.");
     const ride = await ctx.db.get(rideId);
@@ -316,11 +348,50 @@ export const updateRideStatus = mutation({
     if (ride.driverId !== user._id) {
       throw new Error("Only the assigned driver can update this ride.");
     }
-    const now = Date.now();
+
+    if (status === "arriving") {
+      if (ride.status !== "matched") {
+        throw new Error("This ride cannot move to that state.");
+      }
+      await ctx.db.patch(rideId, { status });
+      return;
+    }
+
+    if (status === "in_progress") {
+      if (ride.status !== "arriving") {
+        throw new Error("The driver must arrive at the pickup first.");
+      }
+      if (!ride.pickupOtp) {
+        throw new Error("No pickup code on file — please cancel and re-book.");
+      }
+      if (!otp || otp !== ride.pickupOtp) {
+        throw new Error("Incorrect pickup code. Ask the customer to show the code on their phone.");
+      }
+      // The pickup code is spent; mint the completion code the rider will
+      // share at drop-off so the fare can be settled.
+      await ctx.db.patch(rideId, {
+        status,
+        startedAt: ride.startedAt ?? Date.now(),
+        pickupOtp: undefined,
+        completionOtp: genOtp(),
+      });
+      return;
+    }
+
+    // status === "completed"
+    if (ride.status !== "in_progress") {
+      throw new Error("This ride has not started yet.");
+    }
+    if (!ride.completionOtp) {
+      throw new Error("No completion code on file — please contact support.");
+    }
+    if (!otp || otp !== ride.completionOtp) {
+      throw new Error("Incorrect completion code. Ask the customer to share the code on their phone.");
+    }
     await ctx.db.patch(rideId, {
       status,
-      startedAt: status === "in_progress" ? (ride.startedAt ?? now) : ride.startedAt,
-      completedAt: status === "completed" ? (ride.completedAt ?? now) : ride.completedAt,
+      completedAt: ride.completedAt ?? Date.now(),
+      completionOtp: undefined,
     });
   },
 });

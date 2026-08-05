@@ -38,6 +38,7 @@ import {
   ChevronRight,
   Clock,
   Flag,
+  KeyRound,
   Loader2,
   LocateFixed,
   MapPin,
@@ -908,6 +909,39 @@ function RideView({
       </div>
 
       <StatusTimeline status={ride.status} />
+
+      {/* Ride-lifecycle codes: shown only on the rider's screen, shared with
+          the driver in person — pickup code to start, completion code to close. */}
+      {!completed && ride.pickupOtp && ["matched", "arriving"].includes(ride.status) && (
+        <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-400/5 p-4 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            <KeyRound className="size-3.5" /> Pickup code — show your driver
+          </p>
+          <p className="mt-2 font-mono text-4xl font-bold tracking-[0.3em] text-white">
+            {ride.pickupOtp}
+          </p>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+            {ride.status === "arriving"
+              ? "Your driver is at the pickup and will ask for this code to start the trip."
+              : "When your driver arrives, they'll ask for this code to start the trip."}
+          </p>
+        </div>
+      )}
+
+      {!completed && ride.status === "in_progress" && ride.completionOtp && (
+        <div className="rounded-2xl border border-dashed border-amber-400/40 bg-amber-400/5 p-4 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+            <KeyRound className="size-3.5" /> Completion code — share at drop-off
+          </p>
+          <p className="mt-2 font-mono text-4xl font-bold tracking-[0.3em] text-white">
+            {ride.completionOtp}
+          </p>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+            Give this code to your driver at your destination so the trip can be
+            completed and your fare settled.
+          </p>
+        </div>
+      )}
 
       {searching ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-8 text-center">

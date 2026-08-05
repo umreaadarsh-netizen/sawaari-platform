@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Flag,
   History,
+  KeyRound,
   Loader2,
   MapPin,
   MessageSquare,
@@ -128,12 +129,12 @@ export default function DriverDashboard() {
       if (next >= 1) {
         window.clearInterval(interval);
         if (ride.status === "matched") {
+          // Arrived at pickup — the driver then enters the pickup code the
+          // customer shows to start the trip.
           void updateRideStatus({ rideId: ride._id, status: "arriving" });
-        } else if (ride.status === "in_progress") {
-          void updateRideStatus({ rideId: ride._id, status: "completed" });
-          setJustCompleted({ fare: ride.fare, distanceKm: ride.distanceKm });
-          window.setTimeout(() => setJustCompleted(null), 7000);
         }
+        // At the drop-off the leg simply ends: the trip stays in progress until
+        // the driver enters the completion code shared by the customer.
         setLeg(null);
       } else {
         setLeg({ from: activeLeg.from, to: activeLeg.to, progress: next });
@@ -214,10 +215,13 @@ export default function DriverDashboard() {
     }
   };
 
-  const handleStatus = async (status: "arriving" | "in_progress" | "completed") => {
+  const handleStatus = async (
+    status: "arriving" | "in_progress" | "completed",
+    otp?: string,
+  ) => {
     if (!ride) return;
     try {
-      await updateRideStatus({ rideId: ride._id, status });
+      await updateRideStatus({ rideId: ride._id, status, otp });
       if (status === "completed") {
         setJustCompleted({ fare: ride.fare, distanceKm: ride.distanceKm });
         window.setTimeout(() => setJustCompleted(null), 7000);
@@ -509,10 +513,11 @@ export default function DriverDashboard() {
                   <TripHistory trips={myTrips ?? []} perspective="driver" />
                 ) : ride ? (
                   <DriverRideCard
+                    key={ride.status}
                     ride={ride}
                     chatOpen={chatOpen}
                     setChatOpen={setChatOpen}
-                    onStatus={(s) => void handleStatus(s)}
+                    onStatus={(s, otp) => void handleStatus(s, otp)}
                     userId={user?._id ?? ""}
                   />
                 ) : (
@@ -659,12 +664,14 @@ function DriverRideCard({
   ride: Doc<"rides">;
   chatOpen: boolean;
   setChatOpen: (open: boolean) => void;
-  onStatus: (s: "arriving" | "in_progress" | "completed") => void;
+  onStatus: (s: "arriving" | "in_progress" | "completed", otp?: string) => void;
   userId: string;
 }) {
   const vehicle = vehicleById(ride.vehicleType);
   const now = useNow();
   const scheduled = ride.scheduledFor && ride.scheduledFor > now;
+  // The 4-digit code the customer shows — entered to start / complete the trip.
+  const [otp, setOtp] = useState("");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -722,22 +729,62 @@ function DriverRideCard({
             </Button>
           )}
           {ride.status === "arriving" && (
-            <Button
-              type="button"
-              onClick={() => onStatus("in_progress")}
-              className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
-            >
-              <Play className="size-4" /> Start trip
-            </Button>
+            <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300">
+                <KeyRound className="size-3.5" /> Ask your customer for the pickup code
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                They'll show a 4-digit code on their phone — enter it to start the
+                trip.
+              </p>
+              <div className="mt-2.5 flex gap-2">
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="••••"
+                  inputMode="numeric"
+                  autoFocus
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-emerald-400/50 focus:outline-none"
+                />
+                <Button
+                  type="button"
+                  onClick={() => onStatus("in_progress", otp)}
+                  disabled={otp.length !== 4}
+                  className="h-11 shrink-0 bg-emerald-500 px-4 text-emerald-950 hover:bg-emerald-400"
+                >
+                  <Play className="size-4" /> Start trip
+                </Button>
+              </div>
+            </div>
           )}
           {ride.status === "in_progress" && (
-            <Button
-              type="button"
-              onClick={() => onStatus("completed")}
-              className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
-            >
-              <CheckCircle2 className="size-4" /> Complete trip
-            </Button>
+            <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-300">
+                <KeyRound className="size-3.5" /> Ask your customer for the completion code
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                At the drop-off they'll share a 4-digit code — enter it to complete
+                the trip and settle the fare.
+              </p>
+              <div className="mt-2.5 flex gap-2">
+                <input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="••••"
+                  inputMode="numeric"
+                  autoFocus
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-amber-400/50 focus:outline-none"
+                />
+                <Button
+                  type="button"
+                  onClick={() => onStatus("completed", otp)}
+                  disabled={otp.length !== 4}
+                  className="h-11 shrink-0 bg-emerald-500 px-4 text-emerald-950 hover:bg-emerald-400"
+                >
+                  <CheckCircle2 className="size-4" /> Complete trip
+                </Button>
+              </div>
+            </div>
           )}
           {(ride.status === "matched" || ride.status === "in_progress") && !scheduled && (
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">

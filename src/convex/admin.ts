@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { withoutOtps } from "./rides";
 
 const ACTIVE = ["requested", "matched", "arriving", "in_progress"] as const;
 
@@ -75,7 +76,8 @@ export const listAllRides = query({
   handler: async (ctx, { status }) => {
     await requireAdmin(ctx);
     const rides = await ctx.db.query("rides").order("desc").take(100);
-    return status ? rides.filter((r) => r.status === status) : rides;
+    const filtered = status ? rides.filter((r) => r.status === status) : rides;
+    return filtered.map((r) => withoutOtps(r));
   },
 });
 
