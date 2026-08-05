@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { SawaariLogo, SawaariMark } from "@/components/SawaariLogo";
+import { SawaariMark } from "@/components/SawaariLogo";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,19 +21,16 @@ import {
 } from "@/lib/geo";
 import {
   ArrowUpRight,
-  Battery,
   CalendarClock,
   CarFront,
   Clock,
   Leaf,
   Lock,
-  Map,
   MapPin,
   Navigation,
   Radar,
   Receipt,
   Search,
-  Timer,
   UserCheck,
   Wallet,
   Zap,
@@ -79,242 +76,140 @@ export default function Landing() {
 
 function Nav() {
   const links = [
-    { label: "Home", href: "#home" },
     { label: "Rides", href: "#rides" },
-    { label: "Gotegaon Routes", href: "#routes" },
-    { label: "Fleet", href: "#fleet" },
+    { label: "EV Fleet", href: "#fleet" },
+    { label: "Wallet", href: "#how" },
+    { label: "Driver Partner", href: "#drivers" },
   ];
   return (
-    <header className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-      <nav className="glass flex w-full max-w-5xl items-center justify-between rounded-full py-2 pl-4 pr-2">
-        <Link to="/" aria-label="Sawaari home" className="shrink-0">
-          <SawaariLogo markClassName="size-8" />
+    <header className="fixed inset-x-0 top-0 z-50 px-6 pt-6 md:px-12 lg:px-16">
+      <div className="liquid-glass flex items-center justify-between rounded-xl px-4 py-2">
+        <Link
+          to="/"
+          className="shrink-0 text-2xl font-semibold tracking-tight text-white"
+        >
+          SAWAARI
         </Link>
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+              className="text-sm text-white transition-colors hover:text-gray-300"
             >
               {l.label}
             </a>
           ))}
         </div>
-        <Link to="/auth?returnTo=%2Fapp%2Frider" className="shrink-0">
-          <Button className="glass-strong h-10 rounded-full px-5 text-sm font-semibold text-white hover:bg-white/15">
-            Book Now
-          </Button>
+        <Link
+          to="/auth?returnTo=%2Fapp%2Frider"
+          className="shrink-0 rounded-lg bg-white px-6 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-100"
+        >
+          Book a Ride
         </Link>
-      </nav>
+      </div>
     </header>
   );
 }
 
 // ---- hero -----------------------------------------------------------------
 
+const HERO_VIDEO =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260403_050628_c4e32401-fab4-4a27-b7a8-6e9291cd5959.mp4";
+
+/** Two lines, revealed character-by-character on load. */
+const HERO_LINES = ["Shaping green transit", "with vision and action."];
+
 function Hero() {
   return (
-    <section id="home" className="relative mx-auto max-w-7xl px-5 pb-16 pt-36 sm:px-8 sm:pt-44 lg:pb-24">
-      <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+    <section id="home" className="relative flex min-h-dvh flex-col overflow-hidden bg-black">
+      {/* Raw cinematic background video — full-bleed, autoplaying, with no
+          overlays, gradients or dimming on top of it. */}
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src={HERO_VIDEO}
+        autoPlay
+        muted
+        loop
+        playsInline
+        aria-hidden="true"
+      />
+
+      <div className="relative flex flex-1 flex-col justify-end px-6 pb-12 md:px-12 lg:grid lg:grid-cols-2 lg:items-end lg:px-16 lg:pb-16">
         <div>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="glass-chip inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold text-emerald-300"
+          <h1
+            className="mb-4 text-4xl font-normal text-white md:text-5xl lg:text-6xl xl:text-7xl"
+            style={{ letterSpacing: "-0.04em" }}
           >
-            <Battery className="size-3.5" />
-            All-electric · Gotegaon &amp; nearby villages
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.08 }}
-            className="mt-6 font-serif text-5xl italic leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl"
-          >
-            Venture across Gotegaon with{" "}
-            <span className="bg-gradient-to-r from-emerald-200 via-emerald-300 to-teal-200 bg-clip-text text-transparent">
-              seamless rides.
-            </span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.16 }}
-            className="mt-6 max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg"
-          >
-            Discover fast, reliable, and smooth local auto transportation across
-            Gotegaon and nearby villages — transparent fares, live driver
-            tracking and scheduled pickups, all on your phone.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.24 }}
-            className="mt-9 flex flex-wrap items-center gap-3"
-          >
-            <Link to="/auth?returnTo=%2Fapp%2Frider">
-              <Button
-                size="lg"
-                className="glass-strong h-12 rounded-full px-7 text-[15px] font-semibold text-white hover:bg-white/15"
-              >
-                Book a Sawaari
-                <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Button>
-            </Link>
-            <a href="#routes">
-              <Button
-                size="lg"
-                variant="ghost"
-                className="h-12 rounded-full px-6 text-[15px] font-semibold text-slate-200 hover:bg-white/10 hover:text-white"
-              >
-                <Map className="size-4" />
-                Explore Routes
-              </Button>
-            </a>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.32 }}
-            className="mt-10 grid max-w-lg grid-cols-2 gap-3"
-          >
-            <div className="glass rounded-2xl p-5">
-              <p className="flex items-center gap-2 font-serif text-3xl italic leading-none text-white">
-                <Timer className="size-5 text-emerald-300" />
-                &lt; 10 min
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                Average pickup time in Gotegaon
-              </p>
-            </div>
-            <div className="glass rounded-2xl p-5">
-              <p className="flex items-center gap-2 font-serif text-3xl italic leading-none text-white">
-                <MapPin className="size-5 text-emerald-300" />
-                Local &amp; Reliable
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                Serving Gotegaon &amp; nearby villages
-              </p>
-            </div>
-          </motion.div>
+            {HERO_LINES.map((line, lineIndex) => (
+              <span key={lineIndex} className="block">
+                {line.split("").map((ch, charIndex) => (
+                  <motion.span
+                    key={charIndex}
+                    className="inline-block"
+                    initial={{ opacity: 0, x: -18 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      duration: 0.5,
+                      delay:
+                        0.2 +
+                        lineIndex * line.length * 0.03 +
+                        charIndex * 0.03,
+                      ease: "easeOut",
+                    }}
+                  >
+                    {ch === " " ? "\u00A0" : ch}
+                  </motion.span>
+                ))}
+              </span>
+            ))}
+          </h1>
 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.45 }}
-            className="mt-8 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500"
+            transition={{ duration: 1, delay: 0.8 }}
+            className="mb-5 max-w-xl text-base text-gray-300 md:text-lg"
           >
-            <span className="size-1 rounded-full bg-emerald-400" />
-            Connecting local routes across Madhya Pradesh
+            We power silent, eco-friendly EV auto rides that define what comes
+            next.
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.2 }}
+            className="flex flex-wrap gap-4"
+          >
+            <Link
+              to="/auth?returnTo=%2Fapp%2Frider"
+              className="rounded-lg bg-white px-8 py-3 font-medium text-black transition-colors hover:bg-gray-100"
+            >
+              Book Now
+            </Link>
+            <Link
+              to="/auth?returnTo=%2Fapp%2Fdriver"
+              className="liquid-glass rounded-lg border border-white/20 px-8 py-3 font-medium text-white transition-colors hover:bg-white hover:text-black"
+            >
+              Driver Portal
+            </Link>
+          </motion.div>
         </div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="relative"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 1.4 }}
+          className="flex items-end justify-start pt-10 lg:justify-end lg:pt-0"
         >
-          <div className="glass-strong relative overflow-hidden rounded-[2rem] p-2">
-            <div className="overflow-hidden rounded-[1.5rem]">
-              <MapPreview />
-            </div>
+          <div className="liquid-glass rounded-xl border border-white/20 px-6 py-3">
+            <p className="text-lg font-light text-white md:text-xl lg:text-2xl">
+              Zero Emission. Electric. Seamless.
+            </p>
           </div>
-          <div className="absolute -inset-px -z-10 rounded-[2rem] bg-gradient-to-br from-emerald-400/20 via-transparent to-teal-400/20 blur-sm" />
         </motion.div>
       </div>
     </section>
-  );
-}
-
-const PREVIEW_PICKUP: [number, number] = [22.7568, 79.1696];
-const PREVIEW_DROPOFF: [number, number] = [22.791, 79.216];
-
-function MapPreview() {
-  const [driverPos, setDriverPos] = useState<[number, number]>([22.748, 79.163]);
-  const target = useRef<[number, number]>(PREVIEW_DROPOFF);
-
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      setDriverPos((prev) => {
-        const [lat, lng] = prev;
-        const dLat = target.current[0] - lat;
-        const dLng = target.current[1] - lng;
-        const step = 0.00042;
-        if (Math.abs(dLat) < step && Math.abs(dLng) < step) {
-          target.current = PREVIEW_PICKUP;
-          return prev;
-        }
-        return [lat + Math.sign(dLat) * step, lng + Math.sign(dLng) * step];
-      });
-    }, 550);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const markers: MapMarker[] = [
-    { id: "p", kind: "pickup", position: PREVIEW_PICKUP, label: "Gotegaon Bus Stand" },
-    { id: "d", kind: "dropoff", position: PREVIEW_DROPOFF, label: "Chhapara More Road" },
-    { id: "drv", kind: "driver", position: driverPos, label: "Ramesh · MP 04 EV 4821" },
-    { id: "idle1", kind: "driver-idle", position: [22.771, 79.178] },
-    { id: "idle2", kind: "driver-idle", position: [22.743, 79.152] },
-  ];
-
-  return (
-    <div className="relative">
-      <SawaariMap
-        center={[22.766, 79.19]}
-        zoom={13}
-        markers={markers}
-        interactive={false}
-        className="h-[380px] sm:h-[460px]"
-      />
-
-      {/* live ride card */}
-      <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-[300px]">
-        <div className="glass-strong rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-sm font-bold text-emerald-950">
-              R
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">Ramesh · MP 04 EV 4821</p>
-              <p className="flex items-center gap-1 text-[11px] text-emerald-300">
-                <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
-                </span>
-                Arriving in 4 min
-              </p>
-            </div>
-            <span className="glass-chip rounded-full px-2.5 py-1 text-[11px] font-bold text-emerald-300">
-              ₹115
-            </span>
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-[11px] text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="size-3 text-emerald-300" /> Gotegaon
-            </span>
-            <ArrowUpRight className="size-3 text-slate-600" />
-            <span className="flex items-center gap-1.5">
-              <MapPin className="size-3 text-rose-300" /> Chhapara More
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* fare chip */}
-      <div className="absolute right-4 top-4">
-        <div className="glass-chip rounded-full px-3.5 py-1.5 text-[11px] font-semibold text-slate-200">
-          ₹115 · 5.9 km · 20 min
-        </div>
-      </div>
-    </div>
   );
 }
 
