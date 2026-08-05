@@ -6,13 +6,13 @@ type RideStatus = Doc<"rides">["status"];
 
 const STEPS = [
   { key: "requested", label: "Requested", icon: Radar },
-  { key: "accepted", label: "Matched", icon: UserCheck },
+  { key: "matched", label: "Matched", icon: UserCheck },
   { key: "arriving", label: "At pickup", icon: CarFront },
   { key: "in_progress", label: "On the way", icon: Navigation },
 ] as const;
 
-const ORDER = ["requested", "accepted", "arriving", "in_progress"];
-const ACTIVE = ["requested", "accepted", "arriving", "in_progress"];
+const ORDER = ["requested", "matched", "arriving", "in_progress"];
+const ACTIVE = ["requested", "matched", "arriving", "in_progress"];
 
 export function StatusTimeline({ status }: { status: RideStatus }) {
   if (status === "cancelled") {

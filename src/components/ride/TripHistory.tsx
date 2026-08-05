@@ -16,7 +16,7 @@ import {
 
 const STATUS_LABEL: Record<string, string> = {
   requested: "Booked",
-  accepted: "Assigned",
+  matched: "Matched",
   arriving: "Arrived",
   in_progress: "On the way",
   completed: "Completed",

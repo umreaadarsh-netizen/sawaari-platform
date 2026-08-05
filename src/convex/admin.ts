@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 
-const ACTIVE = ["requested", "accepted", "arriving", "in_progress"] as const;
+const ACTIVE = ["requested", "matched", "arriving", "in_progress"] as const;
 
 const requireAdmin = async (ctx: Parameters<typeof getCurrentUser>[0]) => {
   const user = await getCurrentUser(ctx);

@@ -37,7 +37,7 @@ import {
 
 const STATUS_LABEL: Record<string, string> = {
   requested: "Requested",
-  accepted: "Accepted",
+  matched: "Matched",
   arriving: "Arrived",
   in_progress: "On the way",
   completed: "Completed",
@@ -46,7 +46,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_CLS: Record<string, string> = {
   requested: "bg-amber-400/15 text-amber-300",
-  accepted: "bg-emerald-400/15 text-emerald-300",
+  matched: "bg-emerald-400/15 text-emerald-300",
   arriving: "bg-emerald-400/15 text-emerald-300",
   in_progress: "bg-sky-400/15 text-sky-300",
   completed: "bg-white/10 text-slate-300",
@@ -241,9 +241,9 @@ function BookingsTab({
 }) {
   const rides = useQuery(api.admin.listAllRides, { status: filter === "all" ? undefined : filter });
   const cancelRide = useMutation(api.admin.adminCancelRide);
-  const ACTIVE = ["requested", "accepted", "arriving", "in_progress"];
+  const ACTIVE = ["requested", "matched", "arriving", "in_progress"];
 
-  const filters = ["all", "requested", "accepted", "in_progress", "completed", "cancelled"];
+  const filters = ["all", "requested", "matched", "in_progress", "completed", "cancelled"];
 
   const handleCancel = async (rideId: Id<"rides">) => {
     try {

@@ -31,13 +31,28 @@ export function estimateFare(distanceKm: number, rates: FleetVehicle): number {
 
 const ACTIVE_STATUSES = [
   "requested",
-  "accepted",
+  "matched",
   "arriving",
   "in_progress",
 ] as const;
 
 const isActive = (status: string) =>
   (ACTIVE_STATUSES as readonly string[]).includes(status);
+
+/**
+ * Dispatch radius for ride requests. A `requested` ride is broadcast (via the
+ * live query subscription — the WebSocket channel) only to online drivers whose
+ * current location is within this many kilometres of the pickup.
+ */
+export const MATCHING_RADIUS_KM = 5;
+
+/** Distance from the driver to a ride's pickup, in kilometres. */
+function driverToPickupKm(
+  driver: { lat: number; lng: number },
+  pickup: { lat: number; lng: number },
+): number {
+  return haversineKm(driver.lat, driver.lng, pickup.lat, pickup.lng);
+}
 
 // ---- rider flow -----------------------------------------------------------
 
@@ -199,7 +214,7 @@ export const cancelRide = mutation({
     if (ride.riderId !== user._id) {
       throw new Error("Only the rider can cancel this ride.");
     }
-    if (ride.status !== "requested" && ride.status !== "accepted") {
+    if (ride.status !== "requested" && ride.status !== "matched") {
       throw new Error("This ride can no longer be cancelled.");
     }
     await ctx.db.patch(rideId, { status: "cancelled" });
@@ -208,18 +223,36 @@ export const cancelRide = mutation({
 
 // ---- driver flow ----------------------------------------------------------
 
-/** Open ride requests, streamed live to every online driver. */
+/**
+ * Open ride requests, streamed live over the WebSocket subscription to every
+ * online driver — but only those whose current location is within the 5 km
+ * matching radius of the pickup. The broadcast is a personal, radius-filtered
+ * view: each driver only ever sees requests they could realistically serve.
+ */
 export const openRides = query({
   args: {},
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
     if (!user) return [];
+    const driver = await ctx.db
+      .query("drivers")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    if (!driver) return [];
+    if (!driver.online) return []; // offline drivers receive no broadcasts
+
     const rides = await ctx.db
       .query("rides")
       .withIndex("by_status_created", (q) => q.eq("status", "requested"))
       .order("desc")
-      .take(20);
-    return rides;
+      .take(30);
+
+    return rides
+      .map((r) => ({ ride: r, distanceKm: driverToPickupKm(driver.location, r.pickup) }))
+      .filter(({ distanceKm }) => distanceKm <= MATCHING_RADIUS_KM)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 12)
+      .map(({ ride }) => ride);
   },
 });
 
@@ -240,16 +273,27 @@ export const acceptRide = mutation({
     if (ride.status !== "requested") {
       throw new Error("Another driver already took this ride.");
     }
+    if (ride.driverId) {
+      throw new Error("This ride is already locked to another driver.");
+    }
+    // Defense in depth: never accept a pickup outside the matching radius.
+    if (driverToPickupKm(driver.location, ride.pickup) > MATCHING_RADIUS_KM) {
+      throw new Error("This pickup is outside your 5 km matching radius.");
+    }
 
+    // Lock the ride to this driver and flip the status to `matched` — both
+    // dashboards observe this change through their live queries, so the rider
+    // sees the driver card appear and other drivers see the request vanish
+    // simultaneously, with no page refresh.
     await ctx.db.patch(rideId, {
       driverId: user._id,
       driverName: driver.name,
       vehicleNo: driver.vehicleNo,
-      status: "accepted",
+      status: "matched",
       acceptedAt: Date.now(),
     });
 
-    // The accepted driver gains a trip on completion; bump the counter now so
+    // The matched driver gains a trip on completion; bump the counter now so
     // stats feel alive, then patch again on completion.
     await ctx.db.patch(driver._id, { trips: driver.trips + 1 });
   },

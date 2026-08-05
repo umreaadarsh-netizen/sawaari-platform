@@ -55,7 +55,7 @@ type Field = "pickup" | "dropoff";
 
 const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   requested: { label: "Matching driver", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
-  accepted: { label: "Driver assigned", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
+  matched: { label: "Driver matched", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   arriving: { label: "Driver arrived", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   in_progress: { label: "On the move", cls: "border-sky-400/30 bg-sky-400/10 text-sky-300" },
   completed: { label: "Completed", cls: "border-white/15 bg-white/5 text-slate-300" },
@@ -245,7 +245,7 @@ export default function RiderDashboard() {
       ];
       if (
         driverDoc?.location &&
-        ["accepted", "arriving", "in_progress"].includes(ride.status)
+        ["matched", "arriving", "in_progress"].includes(ride.status)
       ) {
         list.push({
           id: "driver",
@@ -288,7 +288,7 @@ export default function RiderDashboard() {
   // heads over (streamed in real time via the driver's location updates).
   const approachRoute = useMemo(() => {
     if (!ride || !driverDoc?.location) return undefined;
-    if (!["accepted", "arriving"].includes(ride.status)) return undefined;
+    if (!["matched", "arriving"].includes(ride.status)) return undefined;
     return buildRoutePath(driverDoc.location, ride.pickup);
   }, [ride, driverDoc?.location]);
 
@@ -304,7 +304,7 @@ export default function RiderDashboard() {
 
   const driverInfo = useMemo(() => {
     if (!ride || !driverDoc?.location) return null;
-    if (!["accepted", "arriving", "in_progress"].includes(ride.status)) return null;
+    if (!["matched", "arriving", "in_progress"].includes(ride.status)) return null;
     if (ride.scheduledFor && ride.scheduledFor > Date.now()) {
       return {
         name: driverDoc.name,
@@ -863,7 +863,7 @@ function RideView({
   // WhatsApp confirmation — opens wa.me with the booking details pre-filled
   // the moment a driver is assigned (accepted/arriving/in progress).
   const assigned =
-    !completed && ["accepted", "arriving", "in_progress"].includes(ride.status);
+    !completed && ["matched", "arriving", "in_progress"].includes(ride.status);
   const waNumber = driverPhone && driverPhone.replace(/\D/g, "").length >= 10
     ? waDigits(driverPhone)
     : null;
@@ -894,7 +894,7 @@ function RideView({
           </p>
         </div>
         {!completed &&
-          (ride.status === "requested" || ride.status === "accepted") && (
+          (ride.status === "requested" || ride.status === "matched") && (
             <button
               type="button"
               onClick={onCancel}
@@ -926,8 +926,8 @@ function RideView({
               {scheduled
                 ? "Your booking is open to nearby drivers and will be confirmed shortly."
                 : nearbyCount > 0
-                  ? `${nearbyCount} EV driver${nearbyCount === 1 ? "" : "s"} online nearby`
-                  : "Waiting for a nearby driver to go online"}
+                  ? `Broadcasting to ${nearbyCount} EV driver${nearbyCount === 1 ? "" : "s"} within 5 km of your pickup`
+                  : "Broadcasting to drivers within 5 km — waiting for one to come online"}
             </p>
           </div>
         </div>

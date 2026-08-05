@@ -19,8 +19,8 @@ export type Role = Infer<typeof roleValidator>;
 // ---- Sawaari ride-hailing domain ----
 
 export const RIDE_STATUSES = [
-  "requested", // rider asked; waiting for a driver
-  "accepted", // driver matched
+  "requested", // rider asked; broadcast to nearby drivers
+  "matched", // a driver accepted and the ride is locked to them
   "arriving", // driver reached pickup
   "in_progress", // on the road to drop-off
   "completed",
@@ -29,7 +29,7 @@ export const RIDE_STATUSES = [
 
 export const rideStatusValidator = v.union(
   v.literal("requested"),
-  v.literal("accepted"),
+  v.literal("matched"),
   v.literal("arriving"),
   v.literal("in_progress"),
   v.literal("completed"),

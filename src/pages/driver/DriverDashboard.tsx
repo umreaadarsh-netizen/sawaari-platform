@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
-import { GOTEGAON, buildRoutePath, formatINR, formatKm } from "@/lib/geo";
+import { GOTEGAON, buildRoutePath, formatINR, formatKm, haversineKm } from "@/lib/geo";
 import { useRoadRoute } from "@/hooks/use-road-route";
 import { vehicleById } from "@/lib/fleet";
 import { AppShell, DashMode } from "@/components/AppShell";
@@ -95,7 +95,7 @@ export default function DriverDashboard() {
     const target =
       ride.status === "in_progress"
         ? ([ride.dropoff.lat, ride.dropoff.lng] as [number, number])
-        : ride.status === "accepted"
+        : ride.status === "matched"
           ? ([ride.pickup.lat, ride.pickup.lng] as [number, number])
           : null;
     if (!target) {
@@ -126,7 +126,7 @@ export default function DriverDashboard() {
       locationRef.current = { lat, lng };
       if (next >= 1) {
         window.clearInterval(interval);
-        if (ride.status === "accepted") {
+        if (ride.status === "matched") {
           void updateRideStatus({ rideId: ride._id, status: "arriving" });
         } else if (ride.status === "in_progress") {
           void updateRideStatus({ rideId: ride._id, status: "completed" });
@@ -269,7 +269,7 @@ export default function DriverDashboard() {
   // over — the same vector the rider sees, kept in sync over the live stream.
   const approachRoute = useMemo(() => {
     if (!ride || !myProfile?.location) return undefined;
-    if (!["accepted", "arriving"].includes(ride.status)) return undefined;
+    if (!["matched", "arriving"].includes(ride.status)) return undefined;
     return buildRoutePath(myProfile.location, ride.pickup);
   }, [ride, myProfile?.location]);
 
@@ -527,6 +527,10 @@ export default function DriverDashboard() {
                         {openRequests?.length ?? 0} waiting
                       </span>
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Broadcasting within 5 km of your location — new requests
+                      stream in live, no refresh needed.
+                    </p>
 
                     {!online ? (
                       <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-xs text-slate-500">
@@ -587,7 +591,14 @@ export default function DriverDashboard() {
                               </div>
                               <div className="mt-3 flex items-center justify-between">
                                 <span className="text-[11px] text-slate-500">
-                                  {formatKm(r.distanceKm)}
+                                  {formatKm(r.distanceKm)} trip ·{" "}
+                                  {formatKm(
+                                    haversineKm(
+                                      myProfile?.location ?? GOTEGAON,
+                                      r.pickup,
+                                    ),
+                                  )}{" "}
+                                  from you
                                 </span>
                                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-emerald-950 transition-colors hover:bg-emerald-400">
                                   Accept <ArrowUpCircle className="size-3.5 rotate-45" />
@@ -682,7 +693,7 @@ function DriverRideCard({
         )}
 
         <div className="mt-4 grid gap-2">
-          {ride.status === "accepted" && (
+          {ride.status === "matched" && (
             <Button
               type="button"
               onClick={() => onStatus("arriving")}
@@ -709,10 +720,10 @@ function DriverRideCard({
               <CheckCircle2 className="size-4" /> Complete trip
             </Button>
           )}
-          {(ride.status === "accepted" || ride.status === "in_progress") && !scheduled && (
+          {(ride.status === "matched" || ride.status === "in_progress") && !scheduled && (
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
               <Zap className="size-3 text-emerald-300" />
-              {ride.status === "accepted"
+              {ride.status === "matched"
                 ? "Driving to pickup — your customer sees you move live"
                 : "On the way — the customer is tracking you in real time"}
             </p>
