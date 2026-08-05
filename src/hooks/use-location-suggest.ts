@@ -78,16 +78,26 @@ export function useLocationSuggest() {
   return { suggestions, loading, search, clear };
 }
 
-/** Reverse-geocode a tapped map point into a readable address. */
+/**
+ * Reverse-geocode a coordinate pair (GPS fix or tapped map point) into a
+ * short, readable address — e.g. the street/village/town line rather than
+ * the full international display name. Falls back to raw coordinates.
+ */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   try {
     const res = await fetch(
-      `${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+      `${NOMINATIM}/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16`,
     );
-    if (!res.ok) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    if (!res.ok) return fallback;
     const data = (await res.json()) as { display_name?: string };
-    return data.display_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    if (!data.display_name) return fallback;
+    const parts = data.display_name
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return parts.slice(0, 3).join(", ");
   } catch {
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    return fallback;
   }
 }

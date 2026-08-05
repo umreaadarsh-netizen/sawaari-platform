@@ -153,14 +153,27 @@ export default function RiderDashboard() {
         navigator.geolocation.getCurrentPosition(res, rej, {
           enableHighAccuracy: true,
           timeout: 8000,
+          maximumAge: 60_000,
         }),
       );
       const { latitude, longitude } = pos.coords;
       const address = await reverseGeocode(latitude, longitude);
       setPickup({ address, lat: latitude, lng: longitude });
       setPickupText(address);
-    } catch {
-      toast.error("Couldn't locate you. Tap the map to set a pickup point.");
+      setActiveField(null);
+      suggest.clear();
+      toast.success("Current location detected — pickup set.");
+    } catch (error) {
+      const code = (error as GeolocationPositionError | undefined)?.code;
+      if (code === 1) {
+        toast.error(
+          "Location permission was denied. Allow GPS access or tap the map to set a pickup point.",
+        );
+      } else if (code === 2) {
+        toast.error("Location is unavailable. Tap the map to set a pickup point.");
+      } else {
+        toast.error("Couldn't locate you. Tap the map to set a pickup point.");
+      }
     }
     setLocating(false);
   };
@@ -248,12 +261,14 @@ export default function RiderDashboard() {
     return undefined;
   }, [ride, pickup, dropoff]);
 
+  // Coordinate-aware so a fresh GPS fix (even on the same field) re-centers
+  // the map and drops an active pickup marker on the detected point.
   const focusKey = ride
     ? `ride-${ride._id}-${ride.status}-${driverDoc?.location?.lat ?? ""}`
     : pickup && dropoff
-      ? "booked"
+      ? `booked-${pickup.lat.toFixed(5)}-${pickup.lng.toFixed(5)}-${dropoff.lat.toFixed(5)}`
       : pickup
-        ? "pickup"
+        ? `pickup-${pickup.lat.toFixed(5)}-${pickup.lng.toFixed(5)}`
         : "idle";
 
   const driverInfo = useMemo(() => {
@@ -494,14 +509,20 @@ function BookingView(props: {
               type="button"
               onClick={props.onLocate}
               disabled={locating}
-              className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-emerald-300 disabled:opacity-50"
-              title="Use my current location"
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-all disabled:opacity-60",
+                locating
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                  : "border-emerald-400/25 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20",
+              )}
+              title="Detect current location via GPS"
             >
               {locating ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-3.5 animate-spin" />
               ) : (
-                <LocateFixed className="size-4" />
+                <LocateFixed className="size-3.5" />
               )}
+              {locating ? "Locating…" : "Detect"}
             </button>
           }
         />
