@@ -11,7 +11,14 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { DEFAULT_FLEET } from "@/lib/fleet";
-import { estimateFare, etaMinutes, formatKm, haversineKm } from "@/lib/geo";
+import { cn } from "@/lib/utils";
+import {
+  buildRoutePath,
+  estimateFare,
+  etaMinutes,
+  formatKm,
+  haversineKm,
+} from "@/lib/geo";
 import {
   ArrowUpRight,
   Battery,
@@ -318,31 +325,63 @@ const ROUTES: {
   to: string;
   pos: [number, number];
   note: string;
+  tags: string[];
 }[] = [
-  { id: "nsr", from: "Gotegaon Bus Stand", to: "Narsinghpur", pos: [22.891, 79.19], note: "District HQ · NH-26" },
-  { id: "cha", from: "Gotegaon Market", to: "Chhapara", pos: [22.683, 79.233], note: "Village route" },
-  { id: "ten", from: "Gotegaon", to: "Tendukheda", pos: [22.913, 79.052], note: "Weekly market day" },
-  { id: "kar", from: "Gotegaon", to: "Kareli", pos: [22.85, 79.253], note: "Near NH-26" },
+  { id: "nsr", from: "Gotegaon Bus Stand", to: "Narsinghpur", pos: [22.891, 79.19], note: "District HQ · NH-26", tags: ["station", "district", "nh-26"] },
+  { id: "cha", from: "Gotegaon Market", to: "Chhapara", pos: [22.683, 79.233], note: "Village route", tags: ["village", "market"] },
+  { id: "ten", from: "Gotegaon", to: "Tendukheda", pos: [22.913, 79.052], note: "Weekly market day", tags: ["market", "weekly"] },
+  { id: "kar", from: "Gotegaon", to: "Kareli", pos: [22.85, 79.253], note: "Near NH-26", tags: ["nh-26", "village"] },
+  { id: "gad", from: "Gotegaon", to: "Gadarwara", pos: [22.92, 78.783], note: "Tehsil town · long trip", tags: ["town", "long"] },
+  { id: "bab", from: "Gotegaon", to: "Babai", pos: [22.775, 79.055], note: "Village route", tags: ["village"] },
+  { id: "sai", from: "Gotegaon", to: "Saikheda", pos: [22.795, 79.148], note: "Village route", tags: ["village"] },
+  { id: "dun", from: "Gotegaon", to: "Dungariya", pos: [22.738, 79.223], note: "Village route", tags: ["village"] },
+  { id: "chi", from: "Gotegaon", to: "Chichli", pos: [22.742, 79.097], note: "Village route", tags: ["village"] },
+  { id: "amg", from: "Gotegaon", to: "Amgaon", pos: [22.905, 79.292], note: "Village route", tags: ["village"] },
 ];
 
 function LocalRoutes() {
-  const classic = DEFAULT_FLEET[0];
-  const rows = useMemo(
-    () =>
-      ROUTES.map((r) => {
-        const dist = haversineKm(
-          { lat: GOTEGAON[0], lng: GOTEGAON[1] },
-          { lat: r.pos[0], lng: r.pos[1] },
-        );
-        return {
-          ...r,
-          dist,
-          fare: estimateFare(dist, classic),
-          eta: etaMinutes(dist),
-        };
-      }),
-    [classic],
-  );
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(ROUTES[0].id);
+  const [vehicleId, setVehicleId] = useState(DEFAULT_FLEET[0].id);
+
+  const vehicles = useMemo(() => DEFAULT_FLEET.filter((v) => v.enabled), []);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = ROUTES.map((r) => {
+      const dist = haversineKm(
+        { lat: GOTEGAON[0], lng: GOTEGAON[1] },
+        { lat: r.pos[0], lng: r.pos[1] },
+      );
+      return { ...r, dist, eta: etaMinutes(dist) };
+    });
+    if (!q) return base;
+    return base.filter(
+      (r) =>
+        r.from.toLowerCase().includes(q) ||
+        r.to.toLowerCase().includes(q) ||
+        r.note.toLowerCase().includes(q) ||
+        r.tags.some((t) => t.includes(q)),
+    );
+  }, [query]);
+
+  const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
+  const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicles[0];
+  const fare = selected ? estimateFare(selected.dist, vehicle) : 0;
+  const rawFare = selected ? vehicle.baseFare + vehicle.perKm * selected.dist : 0;
+
+  const markers: MapMarker[] = selected
+    ? [
+        { id: "p", kind: "pickup", position: GOTEGAON, label: selected.from },
+        { id: "d", kind: "dropoff", position: selected.pos, label: selected.to },
+      ]
+    : [];
+  const routePath = selected
+    ? buildRoutePath(
+        { lat: GOTEGAON[0], lng: GOTEGAON[1] },
+        { lat: selected.pos[0], lng: selected.pos[1] },
+      )
+    : undefined;
 
   return (
     <section id="routes" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
@@ -354,42 +393,186 @@ function LocalRoutes() {
           Every village, on time, every time
         </h2>
         <p className="mt-4 text-slate-400">
-          Popular local runs with fixed, transparent fares — from the bus stand
-          to the weekly market and every village in between.
+          Search the full catalogue of local runs — from the bus stand to the
+          weekly market and every village in between — and preview your exact
+          fare before you book.
         </p>
       </motion.div>
 
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {rows.map((r, i) => (
-          <motion.div
-            key={r.id}
-            {...fadeUp}
-            transition={{ duration: 0.5, delay: i * 0.08 }}
-            className="glass group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
-          >
-            <div className="absolute -right-10 -top-10 size-28 rounded-full bg-emerald-400/10 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
-              <MapPin className="size-3.5" /> {r.from}
+      <motion.div {...fadeUp} className="mx-auto mt-10 max-w-md">
+        <div className="glass relative rounded-full">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search routes — village, market, town…"
+            className="h-12 w-full rounded-full border border-transparent bg-transparent pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400/40 focus:outline-none"
+          />
+        </div>
+      </motion.div>
+
+      <div className="mt-12 grid items-start gap-6 lg:grid-cols-[1fr_400px]">
+        {/* route list */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {rows.length === 0 && (
+            <p className="col-span-full py-10 text-center text-sm text-slate-500">
+              No routes match your search.
             </p>
-            <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-white">
-              <ArrowUpRight className="size-3.5 text-slate-500" /> {r.to}
-            </p>
-            <p className="mt-3 text-[11px] uppercase tracking-wider text-slate-500">{r.note}</p>
-            <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
-              <div>
-                <p className="font-serif text-2xl italic text-white">₹{r.fare}</p>
-                <p className="mt-0.5 text-[11px] text-slate-500">
-                  {formatKm(r.dist)} · ~{r.eta} min
+          )}
+          {rows.map((r, i) => {
+            const vehicleFare = estimateFare(r.dist, vehicle);
+            const active = selected?.id === r.id;
+            return (
+              <motion.button
+                key={r.id}
+                type="button"
+                onClick={() => setSelectedId(r.id)}
+                {...fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.05 }}
+                className={cn(
+                  "glass group relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-300",
+                  active
+                    ? "border-emerald-300/45 ring-1 ring-emerald-300/20"
+                    : "hover:-translate-y-0.5 hover:border-emerald-300/25",
+                )}
+              >
+                <div
+                  className={cn(
+                    "absolute -right-10 -top-10 size-28 rounded-full bg-emerald-400/10 blur-2xl transition-opacity",
+                    active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+                  )}
+                />
+                <div className="flex items-start justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                    <MapPin className="size-3.5" /> {r.from}
+                  </p>
+                  {active && (
+                    <span className="glass-chip rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                      Selected
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 flex items-center gap-1.5 text-sm font-semibold text-white">
+                  <ArrowUpRight className="size-3.5 text-slate-500" /> {r.to}
                 </p>
-              </div>
-              <Link to="/auth?returnTo=%2Fapp%2Frider" aria-label={`Book ${r.from} to ${r.to}`}>
-                <span className="glass-chip grid size-9 place-items-center rounded-full text-emerald-300 transition-all group-hover:bg-emerald-400/20">
-                  <ArrowUpRight className="size-4" />
+                <p className="mt-2 text-[11px] uppercase tracking-wider text-slate-500">{r.note}</p>
+                <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+                  <div>
+                    <p className="font-serif text-2xl italic text-white">₹{vehicleFare}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {formatKm(r.dist)} · ~{r.eta} min
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "grid size-9 place-items-center rounded-full transition-all",
+                      active
+                        ? "bg-emerald-400/25 text-emerald-300"
+                        : "glass-chip text-emerald-300 group-hover:bg-emerald-400/20",
+                    )}
+                  >
+                    <ArrowUpRight className="size-4" />
+                  </span>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* live fare preview */}
+        <div className="glass-strong sticky top-28 overflow-hidden rounded-3xl p-6">
+          {selected ? (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                  <span className="relative flex size-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  Live fare preview
+                </p>
+                <span className="glass-chip rounded-full px-2.5 py-1 text-[10px] font-semibold text-slate-300">
+                  {formatKm(selected.dist)} · ~{selected.eta} min
                 </span>
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+                <SawaariMap
+                  center={GOTEGAON}
+                  zoom={12}
+                  markers={markers}
+                  route={routePath}
+                  interactive={false}
+                  focusKey={selected.id}
+                  className="h-48"
+                />
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {selected.from} → {selected.to}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">{selected.note}</p>
+                </div>
+              </div>
+
+              <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                Choose your rickshaw
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {vehicles.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setVehicleId(v.id)}
+                    className={cn(
+                      "glass-chip rounded-full px-3.5 py-2 text-xs font-semibold transition-all",
+                      v.id === vehicle.id
+                        ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-300"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white",
+                    )}
+                  >
+                    {v.name} · ₹{v.baseFare}+₹{v.perKm}/km
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 space-y-2 border-t border-white/10 pt-5">
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>Base fare</span>
+                  <span>₹{vehicle.baseFare}</span>
+                </div>
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>
+                    ₹{vehicle.perKm}/km × {selected.dist.toFixed(1)} km
+                  </span>
+                  <span>₹{Math.round(vehicle.perKm * selected.dist)}</span>
+                </div>
+                {fare > Math.round(rawFare) && (
+                  <div className="flex justify-between text-sm text-slate-400">
+                    <span>Minimum fare applied</span>
+                    <span>₹{vehicle.minFare}</span>
+                  </div>
+                )}
+                <div className="flex items-end justify-between border-t border-white/10 pt-4">
+                  <span className="text-sm font-semibold text-white">Estimated fare</span>
+                  <span className="font-serif text-4xl italic text-emerald-300">₹{fare}</span>
+                </div>
+              </div>
+
+              <Link to="/auth?returnTo=%2Fapp%2Frider" className="mt-6 block">
+                <Button className="glass-strong h-12 w-full rounded-full text-[15px] font-semibold text-white hover:bg-white/15">
+                  Book this route <ArrowUpRight className="size-4" />
+                </Button>
               </Link>
-            </div>
-          </motion.div>
-        ))}
+            </>
+          ) : (
+            <p className="py-10 text-center text-sm text-slate-500">
+              Select a route to preview its fare.
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
