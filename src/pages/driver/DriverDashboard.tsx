@@ -10,6 +10,7 @@ import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
 import { ChatPanel } from "@/components/ride/ChatPanel";
+import { TripHistory } from "@/components/ride/TripHistory";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
@@ -25,10 +26,13 @@ import {
   CarFront,
   CheckCircle2,
   Flag,
+  History,
   Loader2,
   MapPin,
   MessageSquare,
+  MessageCircle,
   Navigation,
+  Pencil,
   Play,
   Star,
   Wallet,
@@ -42,16 +46,25 @@ export default function DriverDashboard() {
   const myProfile = useQuery(api.drivers.myProfile);
   const activeRide = useQuery(api.rides.activeRide, { side: "driver" });
   const openRequests = useQuery(api.rides.openRides);
+  const myTrips = useQuery(api.rides.myRides);
   const saveProfile = useMutation(api.drivers.saveProfile);
   const setOnline = useMutation(api.drivers.setOnline);
   const updateLocation = useMutation(api.drivers.updateLocation);
   const acceptRide = useMutation(api.rides.acceptRide);
   const updateRideStatus = useMutation(api.rides.updateRideStatus);
 
-  const [form, setForm] = useState({ name: user?.name ?? "", vehicleNo: "" });
+  const [form, setForm] = useState({
+    name: user?.name ?? "",
+    vehicleNo: "",
+    phone: "",
+  });
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Id<"rides"> | null>(null);
   const [chatOpen, setChatOpen] = useState(true);
+  const [panelTab, setPanelTab] = useState<"duty" | "history">("duty");
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
   const [justCompleted, setJustCompleted] = useState<{
     fare: number;
     distanceKm: number;
@@ -145,12 +158,34 @@ export default function DriverDashboard() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      await saveProfile({ name: form.name, vehicleNo: form.vehicleNo });
+      await saveProfile({ name: form.name, vehicleNo: form.vehicleNo, phone: form.phone });
       toast.success("Driver profile created — welcome to SAWAARI.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save profile.");
     }
     setSavingProfile(false);
+  };
+
+  /** Save (or clear) the WhatsApp number from the profile card. */
+  const handleSavePhone = async () => {
+    if (!myProfile) return;
+    setSavingPhone(true);
+    try {
+      await saveProfile({
+        name: myProfile.name,
+        vehicleNo: myProfile.vehicleNo,
+        phone: phoneDraft.trim(),
+      });
+      setEditingPhone(false);
+      toast.success(
+        phoneDraft.trim()
+          ? "WhatsApp number saved — customers can now chat with you."
+          : "WhatsApp number removed.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the number.");
+    }
+    setSavingPhone(false);
   };
 
   const handleToggleOnline = async (next: boolean) => {
@@ -318,6 +353,13 @@ export default function DriverDashboard() {
                     placeholder="Vehicle no. (e.g. KA 01 EV 4821)"
                     className="border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500"
                   />
+                  <Input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="WhatsApp number (e.g. 98765 43210) — optional"
+                    inputMode="tel"
+                    className="border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-500"
+                  />
                   <Button
                     type="button"
                     onClick={() => void handleSaveProfile()}
@@ -370,6 +412,59 @@ export default function DriverDashboard() {
                     <Stat label="Rating" value={`${myProfile.rating}★`} />
                     <Stat label="Vehicle" value="EV" accent />
                   </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-950/50 px-3 py-2.5 ring-1 ring-white/5">
+                    {editingPhone ? (
+                      <>
+                        <input
+                          value={phoneDraft}
+                          onChange={(e) => setPhoneDraft(e.target.value)}
+                          placeholder="WhatsApp number"
+                          inputMode="tel"
+                          autoFocus
+                          className="min-w-0 flex-1 bg-transparent text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handleSavePhone()}
+                          disabled={savingPhone}
+                          className="shrink-0 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-emerald-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
+                        >
+                          {savingPhone ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            "Save"
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-400">
+                          <MessageCircle className="size-3.5 shrink-0 text-emerald-300" />
+                          {myProfile.phone ? (
+                            <span className="truncate font-semibold text-slate-200">
+                              +91 {myProfile.phone.slice(2).replace(/(\d{5})(\d{5})/, "$1 $2")}
+                            </span>
+                          ) : (
+                            <span className="truncate">
+                              Add a WhatsApp number so customers can chat with you
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhoneDraft(myProfile.phone ?? "");
+                            setEditingPhone(true);
+                          }}
+                          className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-300 transition-colors hover:text-emerald-200"
+                        >
+                          <Pencil className="size-3" />
+                          {myProfile.phone ? "Edit" : "Add"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {justCompleted && (
@@ -384,7 +479,33 @@ export default function DriverDashboard() {
                   </div>
                 )}
 
-                {ride ? (
+                <div className="flex gap-1 rounded-full border border-white/10 bg-white/5 p-1">
+                  {(
+                    [
+                      { id: "duty", label: "Duty" },
+                      { id: "history", label: "Trip history" },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setPanelTab(t.id)}
+                      className={cn(
+                        "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all",
+                        panelTab === t.id
+                          ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                          : "text-slate-400 hover:text-slate-200",
+                      )}
+                    >
+                      {t.id === "history" && <History className="size-3.5" />}
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {panelTab === "history" ? (
+                  <TripHistory trips={myTrips ?? []} perspective="driver" />
+                ) : ride ? (
                   <DriverRideCard
                     ride={ride}
                     chatOpen={chatOpen}

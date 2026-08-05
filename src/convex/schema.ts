@@ -93,6 +93,7 @@ const schema = defineSchema(
       userId: v.id("users"),
       name: v.string(),
       vehicleNo: v.string(),
+      phone: v.optional(v.string()), // E.164-ish 91XXXXXXXXXX — used for the WhatsApp chat link
       online: v.boolean(),
       location: placeValidator,
       lastSeen: v.number(),

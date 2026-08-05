@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import axios from "axios";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { isValidIndianPhone, maskPhone, normalizeIndianPhone } from "./phone";
 
 // ---- constants ------------------------------------------------------------
 
@@ -14,27 +15,10 @@ const MAX_ATTEMPTS = 5;
 
 const VONAGE_ENDPOINT = "https://rest.nexmo.com/sms/json";
 
-/** Normalize an Indian phone number to `91` + 10 digits (E.164-ish). */
-function normalizeIndianPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  const withoutCc = digits.startsWith("91") ? digits.slice(2) : digits;
-  return `91${withoutCc}`;
-}
-
-function isValidIndianPhone(phone: string): boolean {
-  return /^91[6-9]\d{9}$/.test(phone);
-}
-
 function hashCode(code: string, salt: string): string {
   return createHash("sha256")
     .update(`${salt}:${code}`)
     .digest("hex");
-}
-
-/** Mask a number for display: 91XXXXXXXXXX -> +91 XXXXX-XXXXX */
-function maskPhone(phone: string): string {
-  const local = phone.slice(2);
-  return `+91 ${local.slice(0, 5)}-${local.slice(5)}`;
 }
 
 /** Send the SMS through Vonage. Throws a descriptive error on failure. */

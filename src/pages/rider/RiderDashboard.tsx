@@ -22,6 +22,7 @@ import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
 import { ChatPanel } from "@/components/ride/ChatPanel";
+import { TripHistory, receiptId } from "@/components/ride/TripHistory";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -36,10 +37,10 @@ import {
   ChevronRight,
   Clock,
   Flag,
-  History,
   Loader2,
   LocateFixed,
   MapPin,
+  MessageCircle,
   MessageSquare,
   Navigation,
   Radar,
@@ -60,19 +61,16 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   completed: { label: "Completed", cls: "border-white/15 bg-white/5 text-slate-300" },
 };
 
-const HISTORY_LABEL: Record<string, string> = {
-  requested: "Booked",
-  accepted: "Assigned",
-  arriving: "Arrived",
-  in_progress: "On the way",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
 function toDateTimeLocal(d: Date): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
     .toISOString()
     .slice(0, 16);
+}
+
+/** Digits-only Indian number for a wa.me deep link (91 prefix). */
+function waDigits(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  return d.startsWith("91") ? d : `91${d}`;
 }
 
 export default function RiderDashboard() {
@@ -103,6 +101,7 @@ export default function RiderDashboard() {
   const [requesting, setRequesting] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [locating, setLocating] = useState(false);
+  const [panelTab, setPanelTab] = useState<"book" | "history">("book");
   const suggest = useLocationSuggest();
 
   const ride = activeRide ?? null;
@@ -387,6 +386,7 @@ export default function RiderDashboard() {
               ride={ride}
               vehicle={rideVehicle}
               driverInfo={driverInfo}
+              driverPhone={driverDoc?.phone}
               searching={ride.status === "requested"}
               nearbyCount={nearby?.length ?? 0}
               chatOpen={chatOpen}
@@ -395,43 +395,72 @@ export default function RiderDashboard() {
               userId={user?._id ?? ""}
             />
           ) : (
-            <BookingView
-              pickup={pickup}
-              dropoff={dropoff}
-              pickupText={pickupText}
-              dropoffText={dropoffText}
-              activeField={activeField}
-              suggestions={suggest.suggestions}
-              suggestLoading={suggest.loading}
-              vehicles={vehicles}
-              vehicleId={vehicleId}
-              onVehicleChange={setVehicleId}
-              scheduleMode={scheduleMode}
-              scheduledValue={scheduledValue}
-              onScheduleMode={setScheduleMode}
-              onScheduledValue={setScheduledValue}
-              farePreview={farePreview}
-              requesting={requesting}
-              locating={locating}
-              myTrips={myTrips ?? []}
-              onPickupText={(v) => {
-                setPickupText(v);
-                if (pickup) setPickup(null);
-                setActiveField("pickup");
-                suggest.search(v);
-              }}
-              onDropoffText={(v) => {
-                setDropoffText(v);
-                if (dropoff) setDropoff(null);
-                setActiveField("dropoff");
-                suggest.search(v);
-              }}
-              onFocusField={focusField}
-              onBlurField={() => setActiveField(null)}
-              onPickSuggestion={applySuggestion}
-              onLocate={handleLocate}
-              onRequest={handleRequest}
-            />
+            <>
+              <div className="flex shrink-0 gap-1 p-4 pb-0 sm:p-5 sm:pb-0">
+                <div className="flex w-full rounded-full border border-white/10 bg-white/5 p-1">
+                  {(
+                    [
+                      { id: "book", label: "Book a ride" },
+                      { id: "history", label: "Trip history" },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setPanelTab(t.id)}
+                      className={cn(
+                        "flex-1 rounded-full px-3 py-2 text-xs font-semibold transition-all",
+                        panelTab === t.id
+                          ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                          : "text-slate-400 hover:text-slate-200",
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {panelTab === "history" ? (
+                <TripHistory trips={myTrips ?? []} perspective="rider" />
+              ) : (
+                <BookingView
+                  pickup={pickup}
+                  dropoff={dropoff}
+                  pickupText={pickupText}
+                  dropoffText={dropoffText}
+                  activeField={activeField}
+                  suggestions={suggest.suggestions}
+                  suggestLoading={suggest.loading}
+                  vehicles={vehicles}
+                  vehicleId={vehicleId}
+                  onVehicleChange={setVehicleId}
+                  scheduleMode={scheduleMode}
+                  scheduledValue={scheduledValue}
+                  onScheduleMode={setScheduleMode}
+                  onScheduledValue={setScheduledValue}
+                  farePreview={farePreview}
+                  requesting={requesting}
+                  locating={locating}
+                  onPickupText={(v) => {
+                    setPickupText(v);
+                    if (pickup) setPickup(null);
+                    setActiveField("pickup");
+                    suggest.search(v);
+                  }}
+                  onDropoffText={(v) => {
+                    setDropoffText(v);
+                    if (dropoff) setDropoff(null);
+                    setActiveField("dropoff");
+                    suggest.search(v);
+                  }}
+                  onFocusField={focusField}
+                  onBlurField={() => setActiveField(null)}
+                  onPickSuggestion={applySuggestion}
+                  onLocate={handleLocate}
+                  onRequest={handleRequest}
+                />
+              )}
+            </>
           )}
         </aside>
       </div>
@@ -459,7 +488,6 @@ function BookingView(props: {
   farePreview: { dist: number; fare: number; eta: number } | null;
   requesting: boolean;
   locating: boolean;
-  myTrips: Doc<"rides">[];
   onPickupText: (v: string) => void;
   onDropoffText: (v: string) => void;
   onFocusField: (f: Field) => void;
@@ -483,7 +511,6 @@ function BookingView(props: {
     farePreview,
     requesting,
     locating,
-    myTrips,
   } = props;
   const selectedVehicle =
     vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
@@ -630,13 +657,13 @@ function BookingView(props: {
         )}
       </div>
 
-      {/* fare preview */}
+      {/* live fare calculator */}
       {farePreview ? (
         <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-teal-400/5 p-4">
-          <div className="flex items-end justify-between">
+          <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-                Estimated fare · {selectedVehicle.name}
+                Fare calculator · {selectedVehicle.name}
               </p>
               <p className="mt-1 font-display text-3xl font-semibold text-white">
                 {formatINR(farePreview.fare)}
@@ -651,15 +678,41 @@ function BookingView(props: {
               </p>
             </div>
           </div>
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
-            <Sparkles className="size-3 text-emerald-300" /> All-electric fleet ·
-            ₹{selectedVehicle.baseFare} base + ₹{selectedVehicle.perKm}/km · no surge
-            pricing
+
+          <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-xs">
+            <div className="flex justify-between text-slate-400">
+              <span>Base fare</span>
+              <span className="text-slate-200">₹{selectedVehicle.baseFare}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>
+                ₹{selectedVehicle.perKm}/km × {farePreview.dist.toFixed(1)} km
+              </span>
+              <span className="text-slate-200">
+                ₹{Math.round(selectedVehicle.perKm * farePreview.dist)}
+              </span>
+            </div>
+            {farePreview.fare >
+              Math.round(selectedVehicle.baseFare + selectedVehicle.perKm * farePreview.dist) && (
+              <div className="flex justify-between text-slate-400">
+                <span>Minimum fare applied</span>
+                <span className="text-amber-300">₹{selectedVehicle.minFare}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-white/10 pt-1.5 font-semibold text-white">
+              <span>Total</span>
+              <span className="text-emerald-300">{formatINR(farePreview.fare)}</span>
+            </div>
+          </div>
+
+          <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <Sparkles className="size-3 text-emerald-300" /> All-electric fleet · no surge
+            pricing — the fare you see is final
           </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs text-slate-500">
-          Set a pickup and drop-off to see your fare —{" "}
+          Set a pickup and drop-off to calculate your fare —{" "}
           <span className="text-emerald-300">or tap the map</span>
         </div>
       )}
@@ -688,44 +741,6 @@ function BookingView(props: {
         </p>
       </div>
 
-      {/* recent trips */}
-      {myTrips.length > 0 && (
-        <div className="border-t border-white/10 pt-4">
-          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            <History className="size-3" /> Recent trips
-          </p>
-          <div className="space-y-1.5">
-            {myTrips.slice(0, 3).map((t) => (
-              <div
-                key={t._id}
-                className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2"
-              >
-                <span
-                  className={cn(
-                    "shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                    t.status === "completed"
-                      ? "bg-emerald-400/15 text-emerald-300"
-                      : t.status === "cancelled"
-                        ? "bg-rose-400/15 text-rose-300"
-                        : "bg-white/10 text-slate-400",
-                  )}
-                >
-                  {HISTORY_LABEL[t.status] ?? t.status}
-                </span>
-                <p className="min-w-0 flex-1 truncate text-xs text-slate-300">
-                  {t.pickup.address} → {t.dropoff.address}
-                </p>
-                <p className="shrink-0 text-[11px] text-slate-500">
-                  {format(new Date(t.createdAt), "d MMM")}
-                </p>
-                <p className="shrink-0 text-xs font-semibold text-slate-200">
-                  {formatINR(t.fare)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -823,6 +838,7 @@ function RideView({
   ride,
   vehicle,
   driverInfo,
+  driverPhone,
   searching,
   nearbyCount,
   chatOpen,
@@ -833,6 +849,7 @@ function RideView({
   ride: Doc<"rides">;
   vehicle: FleetVehicle | null;
   driverInfo: { name: string; vehicleNo: string; rating: number; msg: string } | null;
+  driverPhone: string | undefined;
   searching: boolean;
   nearbyCount: number;
   chatOpen: boolean;
@@ -842,6 +859,21 @@ function RideView({
 }) {
   const completed = ride.status === "completed";
   const scheduled = ride.scheduledFor ? ride.scheduledFor > Date.now() : false;
+
+  // WhatsApp confirmation — opens wa.me with the booking details pre-filled
+  // the moment a driver is assigned (accepted/arriving/in progress).
+  const assigned =
+    !completed && ["accepted", "arriving", "in_progress"].includes(ride.status);
+  const waNumber = driverPhone && driverPhone.replace(/\D/g, "").length >= 10
+    ? waDigits(driverPhone)
+    : null;
+  const waMessage = assigned
+    ? `Hi ${ride.driverName ?? "there"}, this is ${ride.riderName} — booking ${receiptId(ride._id)} is confirmed.\n\nRoute: ${ride.pickup.address} → ${ride.dropoff.address}\nVehicle: ${vehicle?.name ?? "EV rickshaw"} · Fare: ${formatINR(ride.fare)}\nPickup: ${scheduled ? `scheduled for ${format(new Date(ride.scheduledFor!), "h:mm a")}` : "as soon as possible"}\n\nLooking forward to the ride — thank you!`
+    : "";
+  const waHref =
+    waNumber && waMessage
+      ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`
+      : null;
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
@@ -956,6 +988,32 @@ function RideView({
               <p className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
                 <Clock className="size-3.5 text-emerald-300" /> {driverInfo.msg}
               </p>
+            )}
+
+            {assigned && (
+              <a
+                href={waHref ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!waHref}
+                onClick={(e) => {
+                  if (!waHref) {
+                    e.preventDefault();
+                    toast.info(
+                      "Your driver hasn't added a WhatsApp number yet — message them here instead.",
+                    );
+                  }
+                }}
+                className={cn(
+                  "mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[13px] font-semibold transition-all",
+                  waHref
+                    ? "bg-[#25D366] text-emerald-950 shadow-lg shadow-[#25D366]/20 hover:brightness-110"
+                    : "cursor-not-allowed bg-white/10 text-slate-400",
+                )}
+              >
+                <MessageCircle className="size-4" />
+                Chat with driver on WhatsApp
+              </a>
             )}
           </div>
 
