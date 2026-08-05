@@ -26,12 +26,14 @@ import {
   CarFront,
   Clock,
   Leaf,
+  Lock,
   Map,
   MapPin,
   Navigation,
   Radar,
   Receipt,
   Search,
+  ShieldCheck,
   Timer,
   UserCheck,
   Wallet,
@@ -1025,6 +1027,13 @@ function Footer() {
         <p className="text-xs text-slate-500">
           © {new Date().getFullYear()} SAWAARI Mobility · Narsinghpur, Madhya Pradesh
         </p>
+        <Link
+          to="/admin"
+          className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 transition-colors hover:text-slate-300"
+        >
+          <Lock className="size-3" />
+          Admin
+        </Link>
       </div>
     </footer>
   );
