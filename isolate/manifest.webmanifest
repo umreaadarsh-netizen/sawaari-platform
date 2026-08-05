@@ -1,0 +1,17 @@
+{
+  "name": "SAWAARI — Electric Rickshaw Booking",
+  "short_name": "SAWAARI",
+  "description": "Electric rickshaw booking with fixed fares, live tracking, scheduled pickups and secure payments.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
