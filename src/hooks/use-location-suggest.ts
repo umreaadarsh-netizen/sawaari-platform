@@ -10,6 +10,10 @@ export interface PlaceSuggestion {
 const NOMINATIM = "https://nominatim.openstreetmap.org";
 let lastRequest = 0;
 
+// India bounding box (left, top, right, bottom) so autocomplete and reverse
+// geocoding always resolve inside the country — never placeholder regions.
+const INDIA_VIEWBOX = "68.0,37.1,97.4,6.5";
+
 /**
  * Debounced forward-geocoding autocomplete (OpenStreetMap Nominatim).
  * No API key needed; queries are rate-limited to ~1/sec and cached per query.
@@ -43,7 +47,7 @@ export function useLocationSuggest() {
         const res = await fetch(
           `${NOMINATIM}/search?format=jsonv2&q=${encodeURIComponent(
             q,
-          )}&limit=6&countrycodes=in&addressdetails=1`,
+          )}&limit=6&countrycodes=in&addressdetails=1&viewbox=${INDIA_VIEWBOX}&bounded=1`,
         );
         if (!res.ok) throw new Error("geocoding failed");
         const data = (await res.json()) as Array<{

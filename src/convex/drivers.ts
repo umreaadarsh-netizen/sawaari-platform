@@ -2,10 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 
-export const BENGALURU = {
-  address: "Bengaluru, Karnataka, India",
-  lat: 12.9716,
-  lng: 77.5946,
+export const GOTEGAON = {
+  address: "Gotegaon, Madhya Pradesh, India",
+  lat: 22.92,
+  lng: 79.18,
 };
 
 // ---- driver profile -------------------------------------------------------
@@ -57,7 +57,7 @@ export const saveProfile = mutation({
       name: cleanName,
       vehicleNo: cleanNo,
       online: false,
-      location: BENGALURU,
+      location: GOTEGAON,
       lastSeen: now,
       rating: 4.9,
       trips: 0,

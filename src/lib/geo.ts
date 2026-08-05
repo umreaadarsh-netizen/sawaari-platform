@@ -74,3 +74,29 @@ export function buildRoutePath(a: LatLng, b: LatLng): [number, number][] {
 }
 
 export const BENGALURU: LatLng = { lat: 12.9716, lng: 77.5946 };
+
+/**
+ * Sawaari's home turf — Gotegaon, Narsinghpur district, Madhya Pradesh.
+ * Used as the default map center and as the fallback pickup when GPS is
+ * blocked or returns a placeholder outside India.
+ */
+export const GOTEGAON: LatLng = { lat: 22.92, lng: 79.18 };
+export const GOTEGAON_ADDRESS = "Gotegaon, Madhya Pradesh, India";
+
+/** Rough bounding box covering India (lat/lng). */
+export const INDIA_BOUNDS = {
+  south: 6.5,
+  north: 37.1,
+  west: 68.0,
+  east: 97.4,
+};
+
+/** True when a coordinate pair falls within India's bounding box. */
+export function isInIndia(lat: number, lng: number): boolean {
+  return (
+    lat >= INDIA_BOUNDS.south &&
+    lat <= INDIA_BOUNDS.north &&
+    lng >= INDIA_BOUNDS.west &&
+    lng <= INDIA_BOUNDS.east
+  );
+}

@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
-import { BENGALURU, buildRoutePath, formatINR, formatKm } from "@/lib/geo";
+import { GOTEGAON, buildRoutePath, formatINR, formatKm } from "@/lib/geo";
 import { vehicleById } from "@/lib/fleet";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
@@ -89,7 +89,7 @@ export default function DriverDashboard() {
       return;
     }
     const startLeg = () => {
-      const from = locationRef.current ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
+      const from = locationRef.current ?? { lat: GOTEGAON.lat, lng: GOTEGAON.lng };
       setLeg({ from: [from.lat, from.lng], to: target, progress: 0 });
     };
     const delay = ride.scheduledFor ? Math.max(0, ride.scheduledFor - Date.now()) : 0;
@@ -131,7 +131,7 @@ export default function DriverDashboard() {
   useEffect(() => {
     if (!online || ride) return;
     const hb = window.setInterval(() => {
-      const base = locationRef.current ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
+      const base = locationRef.current ?? { lat: GOTEGAON.lat, lng: GOTEGAON.lng };
       const lat = base.lat + (Math.random() - 0.5) * 0.0012;
       const lng = base.lng + (Math.random() - 0.5) * 0.0012;
       void updateLocation({ lat, lng });
@@ -156,7 +156,7 @@ export default function DriverDashboard() {
     try {
       await setOnline({ online: next });
       if (next) {
-        const base = myProfile?.location ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
+        const base = myProfile?.location ?? { lat: GOTEGAON.lat, lng: GOTEGAON.lng };
         await updateLocation({ lat: base.lat, lng: base.lng });
         toast.success("You're online — ride requests will stream in live.");
       } else {
@@ -239,7 +239,7 @@ export default function DriverDashboard() {
         {/* Map */}
         <main className="relative h-[40vh] lg:order-2 lg:h-auto lg:flex-1">
           <SawaariMap
-            center={[BENGALURU.lat, BENGALURU.lng]}
+            center={[GOTEGAON.lat, GOTEGAON.lng]}
             zoom={13}
             markers={markers}
             route={route}

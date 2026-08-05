@@ -4,7 +4,8 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  BENGALURU,
+  GOTEGAON,
+  GOTEGAON_ADDRESS,
   Place,
   buildRoutePath,
   estimateFare,
@@ -12,6 +13,7 @@ import {
   formatINR,
   formatKm,
   haversineKm,
+  isInIndia,
 } from "@/lib/geo";
 import { vehicleById, type FleetVehicle } from "@/lib/fleet";
 import { reverseGeocode, useLocationSuggest } from "@/hooks/use-location-suggest";
@@ -142,9 +144,18 @@ export default function RiderDashboard() {
     }
   };
 
+  /** Drop the pickup on Gotegaon when GPS is blocked or returns garbage. */
+  const fallbackToGotegaon = (reason: string) => {
+    setPickup({ address: GOTEGAON_ADDRESS, lat: GOTEGAON.lat, lng: GOTEGAON.lng });
+    setPickupText(GOTEGAON_ADDRESS);
+    setActiveField(null);
+    suggest.clear();
+    toast.info(`${reason} Pickup set to ${GOTEGAON_ADDRESS} — tap the map to adjust.`);
+  };
+
   const handleLocate = async () => {
     if (!navigator.geolocation) {
-      toast.error("Geolocation is not available in this browser.");
+      fallbackToGotegaon("Geolocation is not available in this browser.");
       return;
     }
     setLocating(true);
@@ -157,6 +168,12 @@ export default function RiderDashboard() {
         }),
       );
       const { latitude, longitude } = pos.coords;
+      // GPS proxies / VPNs can return placeholder regions (e.g. South Africa).
+      // If the fix falls outside India, treat it as unusable and default to Gotegaon.
+      if (!isInIndia(latitude, longitude)) {
+        fallbackToGotegaon("Location resolved outside India.");
+        return;
+      }
       const address = await reverseGeocode(latitude, longitude);
       setPickup({ address, lat: latitude, lng: longitude });
       setPickupText(address);
@@ -166,16 +183,15 @@ export default function RiderDashboard() {
     } catch (error) {
       const code = (error as GeolocationPositionError | undefined)?.code;
       if (code === 1) {
-        toast.error(
-          "Location permission was denied. Allow GPS access or tap the map to set a pickup point.",
-        );
+        fallbackToGotegaon("Location permission was denied.");
       } else if (code === 2) {
-        toast.error("Location is unavailable. Tap the map to set a pickup point.");
+        fallbackToGotegaon("Location is unavailable.");
       } else {
-        toast.error("Couldn't locate you. Tap the map to set a pickup point.");
+        fallbackToGotegaon("Couldn't locate you.");
       }
+    } finally {
+      setLocating(false);
     }
-    setLocating(false);
   };
 
   const handleRequest = async () => {
@@ -306,7 +322,7 @@ export default function RiderDashboard() {
         {/* Map */}
         <main className="relative h-[40vh] lg:order-2 lg:h-auto lg:flex-1">
           <SawaariMap
-            center={[BENGALURU.lat, BENGALURU.lng]}
+            center={[GOTEGAON.lat, GOTEGAON.lng]}
             zoom={13}
             markers={markers}
             route={route}
