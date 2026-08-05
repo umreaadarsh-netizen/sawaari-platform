@@ -111,6 +111,16 @@ function RouteSyncer() {
 }
 
 
+// Register the PWA service worker in production builds only (a dev-registered
+// worker would serve stale cached assets during development/preview).
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.warn("[PWA] Service worker registration failed:", err);
+    });
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
