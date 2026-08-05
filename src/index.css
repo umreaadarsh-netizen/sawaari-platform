@@ -203,6 +203,44 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ---- moonlit sky -------------------------------------------------------- */
+@keyframes sawa-twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+}
+.sawa-star {
+  animation: sawa-twinkle 4.5s ease-in-out infinite;
+}
+
+@keyframes sawa-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+.sawa-shake {
+  animation: sawa-shake 0.4s ease;
+}
+
 /* ---- map marker pins ----------------------------------------------------- */
 .sawa-pin {
   position: relative;
