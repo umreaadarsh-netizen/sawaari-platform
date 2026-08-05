@@ -128,7 +128,7 @@ const schema = defineSchema(
       baseFare: v.number(),
       distanceFare: v.number(),
       totalFare: v.number(),
-      paymentMethod: v.union(v.literal("upi"), v.literal("cash")),
+      paymentMethod: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
       upiRef: v.optional(v.string()), // UPI transaction reference (UTRN)
       settledAt: v.number(),
     })

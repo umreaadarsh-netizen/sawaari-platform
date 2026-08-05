@@ -32,7 +32,6 @@ import { useNavigate } from "react-router";
 import { format } from "date-fns";
 import {
   ArrowRight,
-  Banknote,
   CalendarClock,
   CarFront,
   CheckCircle2,
@@ -48,7 +47,6 @@ import {
   Navigation,
   Radar,
   Search,
-  Smartphone,
   Sparkles,
   Star,
   X,
@@ -1092,7 +1090,7 @@ function CheckoutCard({
   vehicle: FleetVehicle | null;
 }) {
   const payRide = useMutation(api.rides.payRide);
-  const [method, setMethod] = useState<"upi" | "cash">("upi");
+  const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
   const [paying, setPaying] = useState(false);
 
   const rates = vehicle ?? vehicleById("classic");

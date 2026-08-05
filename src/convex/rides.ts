@@ -178,7 +178,7 @@ export const activeRide = query({
 export const payRide = mutation({
   args: {
     rideId: v.id("rides"),
-    method: v.union(v.literal("upi"), v.literal("cash")),
+    method: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
     upiRef: v.optional(v.string()), // real gateway reference, when wired up
   },
   handler: async (ctx, { rideId, method, upiRef }) => {
