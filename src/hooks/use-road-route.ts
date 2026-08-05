@@ -12,22 +12,28 @@ export function useRoadRoute(
   to: LatLng | null,
   enabled = true,
 ): [number, number][] | null {
-  const [roadRoute, setRoadRoute] = useState<[number, number][] | null>(null);
+  // One result is kept at a time, tagged with the request key it belongs to.
+  // Deriving the key during render keeps a stale route out of view the moment
+  // the endpoints change — no state resets inside the effect.
+  const [result, setResult] = useState<{
+    key: string;
+    path: [number, number][];
+  } | null>(null);
+  const key =
+    !enabled || !from || !to
+      ? null
+      : `${from.lat},${from.lng}-${to.lat},${to.lng}`;
 
   useEffect(() => {
-    if (!enabled || !from || !to) {
-      setRoadRoute(null);
-      return;
-    }
+    if (!enabled || !from || !to || !key) return;
     let cancelled = false;
-    setRoadRoute(null);
     void fetchOsrmRoute(from, to).then((path) => {
-      if (!cancelled) setRoadRoute(path);
+      if (!cancelled) setResult({ key, path });
     });
     return () => {
       cancelled = true;
     };
-  }, [enabled, from?.lat, from?.lng, to?.lat, to?.lng]);
+  }, [enabled, from, to, key]);
 
-  return roadRoute;
+  return key && result?.key === key ? result.path : null;
 }

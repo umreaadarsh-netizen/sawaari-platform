@@ -88,18 +88,18 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     return () => window.clearInterval(t);
   }, [resendIn]);
 
-  const stars = useMemo(
-    () =>
-      Array.from({ length: 70 }, (_, i) => ({
-        id: i,
-        top: Math.random() * 72,
-        left: Math.random() * 100,
-        size: Math.random() * 1.8 + 0.8,
-        delay: Math.random() * 6,
-        duration: 3 + Math.random() * 5,
-        opacity: 0.25 + Math.random() * 0.6,
-      })),
-    [],
+  // Random night-sky positions, generated once via a lazy initializer so the
+  // component stays a pure function of props/state (Math.random only at init).
+  const [stars] = useState(() =>
+    Array.from({ length: 70 }, (_, i) => ({
+      id: i,
+      top: Math.random() * 72,
+      left: Math.random() * 100,
+      size: Math.random() * 1.8 + 0.8,
+      delay: Math.random() * 6,
+      duration: 3 + Math.random() * 5,
+      opacity: 0.25 + Math.random() * 0.6,
+    })),
   );
 
   const isStart = method === "phone" ? phoneStep === "input" : emailStep === "signIn";

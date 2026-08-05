@@ -5,6 +5,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { GOTEGAON, buildRoutePath, formatINR, formatKm, haversineKm } from "@/lib/geo";
 import { useRoadRoute } from "@/hooks/use-road-route";
+import { useNow } from "@/hooks/use-now";
 import { vehicleById } from "@/lib/fleet";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
@@ -71,6 +72,7 @@ export default function DriverDashboard() {
 
   const ride = activeRide ?? null;
   const online = myProfile?.online ?? false;
+  const now = useNow();
 
   // ---- simulated live drive ----------------------------------------------
   const locationRef = useRef<{ lat: number; lng: number }>(myProfile?.location ?? null);
@@ -84,43 +86,43 @@ export default function DriverDashboard() {
     progress: number;
   } | null>(null);
 
-  // Start a drive leg whenever a ride moves into accepted / in_progress,
+  // Where a drive leg points right now: pickup while matched, drop-off while
+  // in progress — null outside those states (or without a ride).
+  const legTarget = useMemo(() => {
+    if (!ride) return null;
+    if (ride.status === "in_progress")
+      return [ride.dropoff.lat, ride.dropoff.lng] as [number, number];
+    if (ride.status === "matched")
+      return [ride.pickup.lat, ride.pickup.lng] as [number, number];
+    return null;
+  }, [ride]);
+
+  // A leg is only live while online with a real target; deriving it in render
+  // keeps the "no leg" state in sync without resetting state inside an effect.
+  const activeLeg = online && legTarget ? leg : null;
+
+  // Start a drive leg whenever a ride moves into matched / in_progress,
   // respecting the scheduled pickup time (auto-starts when it arrives).
   useEffect(() => {
-    if (!online || !ride) {
-      setLeg(null);
-      return;
-    }
-    const target =
-      ride.status === "in_progress"
-        ? ([ride.dropoff.lat, ride.dropoff.lng] as [number, number])
-        : ride.status === "matched"
-          ? ([ride.pickup.lat, ride.pickup.lng] as [number, number])
-          : null;
-    if (!target) {
-      setLeg(null);
-      return;
-    }
+    if (!online || !legTarget) return;
     const startLeg = () => {
       const from = locationRef.current ?? { lat: GOTEGAON.lat, lng: GOTEGAON.lng };
-      setLeg({ from: [from.lat, from.lng], to: target, progress: 0 });
+      setLeg({ from: [from.lat, from.lng], to: legTarget, progress: 0 });
     };
-    const delay = ride.scheduledFor ? Math.max(0, ride.scheduledFor - Date.now()) : 0;
+    const delay = ride?.scheduledFor ? Math.max(0, ride.scheduledFor - Date.now()) : 0;
     if (delay > 0) {
-      setLeg(null);
       const t = window.setTimeout(startLeg, delay + 2000);
       return () => window.clearTimeout(t);
     }
     startLeg();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [online, ride?._id, ride?.status]);
+  }, [online, legTarget, ride?.scheduledFor]);
 
   useEffect(() => {
-    if (!leg || !ride) return;
+    if (!activeLeg || !ride) return;
     const interval = window.setInterval(() => {
-      const next = Math.min(1, leg.progress + 0.06);
-      const lat = leg.from[0] + (leg.to[0] - leg.from[0]) * next;
-      const lng = leg.from[1] + (leg.to[1] - leg.from[1]) * next;
+      const next = Math.min(1, activeLeg.progress + 0.06);
+      const lat = activeLeg.from[0] + (activeLeg.to[0] - activeLeg.from[0]) * next;
+      const lng = activeLeg.from[1] + (activeLeg.to[1] - activeLeg.from[1]) * next;
       void updateLocation({ lat, lng });
       locationRef.current = { lat, lng };
       if (next >= 1) {
@@ -134,11 +136,11 @@ export default function DriverDashboard() {
         }
         setLeg(null);
       } else {
-        setLeg({ from: leg.from, to: leg.to, progress: next });
+        setLeg({ from: activeLeg.from, to: activeLeg.to, progress: next });
       }
     }, 2500);
     return () => window.clearInterval(interval);
-  }, [leg, ride, updateLocation, updateRideStatus]);
+  }, [activeLeg, ride, updateLocation, updateRideStatus]);
 
   // Gentle drift while online & idle so the marker stays fresh on the rider map.
   useEffect(() => {
@@ -266,11 +268,12 @@ export default function DriverDashboard() {
 
   // Live approach vector: this driver's own position → pickup while heading
   // over — the same vector the rider sees, kept in sync over the live stream.
+  const myLocation = myProfile?.location;
   const approachRoute = useMemo(() => {
-    if (!ride || !myProfile?.location) return undefined;
+    if (!ride || !myLocation) return undefined;
     if (!["matched", "arriving"].includes(ride.status)) return undefined;
-    return buildRoutePath(myProfile.location, ride.pickup);
-  }, [ride, myProfile?.location]);
+    return buildRoutePath(myLocation, ride.pickup);
+  }, [ride, myLocation]);
 
   const focusKey = ride
     ? `ride-${ride._id}-${ride.status}-${myProfile?.location?.lat ?? ""}`
@@ -546,7 +549,7 @@ export default function DriverDashboard() {
                       <div className="space-y-2.5">
                         {(openRequests ?? []).map((r) => {
                           const selected = selectedRequest === r._id;
-                          const scheduled = r.scheduledFor && r.scheduledFor > Date.now();
+                          const scheduled = r.scheduledFor && r.scheduledFor > now;
                           return (
                             <button
                               key={r._id}
@@ -660,7 +663,8 @@ function DriverRideCard({
   userId: string;
 }) {
   const vehicle = vehicleById(ride.vehicleType);
-  const scheduled = ride.scheduledFor && ride.scheduledFor > Date.now();
+  const now = useNow();
+  const scheduled = ride.scheduledFor && ride.scheduledFor > now;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">

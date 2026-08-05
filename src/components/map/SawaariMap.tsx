@@ -69,8 +69,13 @@ export function SawaariMap({
   const approachRef = useRef<L.Polyline[]>([]);
   const onMapClickRef = useRef(onMapClick);
   const latestRef = useRef({ markers, route, approachRoute });
-  onMapClickRef.current = onMapClick;
-  latestRef.current = { markers, route, approachRoute };
+  // Keep the latest props reachable from effects without re-running them.
+  // Runs after every render — and before the focus effect below — so a
+  // focusKey change always sees the freshest markers/routes.
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+    latestRef.current = { markers, route, approachRoute };
+  });
 
   const svgRenderer = useMemo(() => L.svg(), []);
 
@@ -202,7 +207,6 @@ export function SawaariMap({
       }
     }, 60);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusKey]);
 
   return (

@@ -18,6 +18,7 @@ import {
 import { vehicleById, type FleetVehicle } from "@/lib/fleet";
 import { reverseGeocode, useLocationSuggest } from "@/hooks/use-location-suggest";
 import { useRoadRoute } from "@/hooks/use-road-route";
+import { useNow } from "@/hooks/use-now";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
@@ -105,6 +106,7 @@ export default function RiderDashboard() {
   const suggest = useLocationSuggest();
 
   const ride = activeRide ?? null;
+  const now = useNow();
   const vehicles = (fleet ?? []).filter((v) => v.enabled);
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
 
@@ -286,11 +288,12 @@ export default function RiderDashboard() {
 
   // Live approach vector: driver's current position → pickup while the driver
   // heads over (streamed in real time via the driver's location updates).
+  const driverLocation = driverDoc?.location;
   const approachRoute = useMemo(() => {
-    if (!ride || !driverDoc?.location) return undefined;
+    if (!ride || !driverLocation) return undefined;
     if (!["matched", "arriving"].includes(ride.status)) return undefined;
-    return buildRoutePath(driverDoc.location, ride.pickup);
-  }, [ride, driverDoc?.location]);
+    return buildRoutePath(driverLocation, ride.pickup);
+  }, [ride, driverLocation]);
 
   // Coordinate-aware so a fresh GPS fix (even on the same field) re-centers
   // the map and drops an active pickup marker on the detected point.
@@ -305,7 +308,7 @@ export default function RiderDashboard() {
   const driverInfo = useMemo(() => {
     if (!ride || !driverDoc?.location) return null;
     if (!["matched", "arriving", "in_progress"].includes(ride.status)) return null;
-    if (ride.scheduledFor && ride.scheduledFor > Date.now()) {
+    if (ride.scheduledFor && ride.scheduledFor > now) {
       return {
         name: driverDoc.name,
         vehicleNo: driverDoc.vehicleNo,
@@ -324,7 +327,7 @@ export default function RiderDashboard() {
           ? `Arriving in ~${etaMinutes(dist)} min`
           : `Driver is ${formatKm(dist)} away`,
     };
-  }, [ride, driverDoc]);
+  }, [ride, driverDoc, now]);
 
   const statusPill = ride ? STATUS_PILL[ride.status] : null;
   const rideVehicle = ride ? vehicleById(ride.vehicleType) : null;
@@ -512,8 +515,9 @@ function BookingView(props: {
   const selectedVehicle =
     vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
 
-  const minTime = toDateTimeLocal(new Date(Date.now() + 15 * 60 * 1000));
-  const maxTime = toDateTimeLocal(new Date(Date.now() + 48 * 60 * 60 * 1000));
+  const now = useNow();
+  const minTime = toDateTimeLocal(new Date(now + 15 * 60 * 1000));
+  const maxTime = toDateTimeLocal(new Date(now + 48 * 60 * 60 * 1000));
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
@@ -855,7 +859,8 @@ function RideView({
   userId: string;
 }) {
   const completed = ride.status === "completed";
-  const scheduled = ride.scheduledFor ? ride.scheduledFor > Date.now() : false;
+  const now = useNow();
+  const scheduled = ride.scheduledFor ? ride.scheduledFor > now : false;
 
   // WhatsApp confirmation — opens wa.me with the booking details pre-filled
   // the moment a driver is assigned (accepted/arriving/in progress).

@@ -33,7 +33,6 @@ import {
   Radar,
   Receipt,
   Search,
-  ShieldCheck,
   Timer,
   UserCheck,
   Wallet,
