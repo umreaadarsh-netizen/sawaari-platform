@@ -78,7 +78,8 @@ export const saveProfile = mutation({
       online: false,
       location: GOTEGAON,
       lastSeen: now,
-      rating: 4.9,
+      rating: 4.9, // placeholder until the first genuine rider rating arrives
+      ratingCount: 0,
       trips: 0,
     });
   },

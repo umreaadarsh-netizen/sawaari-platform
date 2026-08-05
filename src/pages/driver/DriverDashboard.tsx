@@ -36,6 +36,7 @@ import {
   Navigation,
   Pencil,
   Play,
+  Star,
   Wallet,
   Zap,
 } from "lucide-react";
@@ -49,6 +50,7 @@ export default function DriverDashboard() {
   const openRequests = useQuery(api.rides.openRides);
   const myTrips = useQuery(api.rides.myRides);
   const wallet = useQuery(api.wallet.myWallet);
+  const feedback = useQuery(api.ratings.driverRatings);
   const saveProfile = useMutation(api.drivers.saveProfile);
   const setOnline = useMutation(api.drivers.setOnline);
   const updateLocation = useMutation(api.drivers.updateLocation);
@@ -77,6 +79,15 @@ export default function DriverDashboard() {
   const ride = activeRide ?? null;
   const online = myProfile?.online ?? false;
   const now = useNow();
+
+  // rideId → stars this driver earned, so trip history can show them.
+  const ratingsByRide = useMemo(() => {
+    const map: Record<string, number> = {};
+    (feedback ?? []).forEach((f) => {
+      map[f.rideId] = f.rating;
+    });
+    return map;
+  }, [feedback]);
 
   // ---- simulated live drive ----------------------------------------------
   const locationRef = useRef<{ lat: number; lng: number }>(myProfile?.location ?? null);
@@ -427,6 +438,10 @@ export default function DriverDashboard() {
                     <Stat label="Rating" value={`${myProfile.rating}★`} />
                     <Stat label="Vehicle" value="EV" accent />
                   </div>
+                  <p className="mt-1.5 text-center text-[10px] text-slate-500">
+                    {myProfile.ratingCount ?? 0} rider rating
+                    {(myProfile.ratingCount ?? 0) === 1 ? "" : "s"} · updated live
+                  </p>
 
                   <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-950/50 px-3 py-2.5 ring-1 ring-white/5">
                     {editingPhone ? (
@@ -513,6 +528,60 @@ export default function DriverDashboard() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      <Star className="size-3.5 text-amber-300" />
+                      Recent feedback
+                    </p>
+                    <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                      {(feedback ?? []).length}
+                    </span>
+                  </div>
+                  {(feedback ?? []).length === 0 ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                      No feedback yet — riders are prompted to rate you after
+                      every completed trip. New ratings stream in live.
+                    </p>
+                  ) : (
+                    <div className="mt-2.5 space-y-2">
+                      {(feedback ?? []).slice(0, 3).map((f) => (
+                        <div
+                          key={f._id}
+                          className="rounded-xl bg-slate-950/50 px-3 py-2.5 ring-1 ring-white/5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-[11px] font-semibold text-slate-200">
+                              {f.riderName}
+                            </p>
+                            <span className="flex shrink-0 items-center gap-0.5">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <Star
+                                  key={i}
+                                  className={cn(
+                                    "size-3",
+                                    i < f.rating
+                                      ? "fill-amber-300 text-amber-300"
+                                      : "text-slate-600",
+                                  )}
+                                />
+                              ))}
+                            </span>
+                          </div>
+                          {f.comment && (
+                            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                              {f.comment}
+                            </p>
+                          )}
+                          <p className="mt-1 text-[10px] text-slate-600">
+                            {format(new Date(f.createdAt), "d MMM · h:mm a")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {justCompleted && (
                   <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                     <CheckCircle2 className="size-6 shrink-0 text-emerald-300" />
@@ -552,7 +621,11 @@ export default function DriverDashboard() {
                 </div>
 
                 {panelTab === "history" ? (
-                  <TripHistory trips={myTrips ?? []} perspective="driver" />
+                  <TripHistory
+                    trips={myTrips ?? []}
+                    perspective="driver"
+                    ratings={ratingsByRide}
+                  />
                 ) : ride ? (
                   <DriverRideCard
                     key={ride.status}

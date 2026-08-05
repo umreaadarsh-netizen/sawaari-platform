@@ -123,7 +123,8 @@ const schema = defineSchema(
       online: v.boolean(),
       location: placeValidator,
       lastSeen: v.number(),
-      rating: v.number(),
+      rating: v.number(), // live running average from rideRatings (starts at a 4.9 placeholder)
+      ratingCount: v.number(), // number of genuine rider ratings folded into the average
       trips: v.number(),
     })
       .index("by_user", ["userId"])
@@ -166,6 +167,23 @@ const schema = defineSchema(
       .index("by_ride", ["rideId"])
       .index("by_rider_created", ["riderId", "settledAt"])
       .index("by_driver_created", ["driverId", "settledAt"]),
+
+    // Rider → driver trip ratings. One immutable rating per completed ride,
+    // written the moment the fare is settled. Each rating rolls up into the
+    // driver's live average (`drivers.rating`) so both dashboards stream the
+    // same score over the WebSocket subscription.
+    rideRatings: defineTable({
+      rideId: v.id("rides"),
+      riderId: v.id("users"),
+      riderName: v.string(),
+      driverId: v.id("users"),
+      rating: v.number(), // 1–5 stars
+      comment: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("by_ride", ["rideId"])
+      .index("by_rider_created", ["riderId", "createdAt"])
+      .index("by_driver_created", ["driverId", "createdAt"]),
 
     // In-ride chat between rider and driver (streamed live to both).
     rideMessages: defineTable({

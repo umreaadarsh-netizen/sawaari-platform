@@ -11,6 +11,7 @@ import {
   History,
   MapPin,
   Receipt,
+  Star,
   Wallet,
   XCircle,
 } from "lucide-react";
@@ -39,9 +40,12 @@ function receiptId(rideId: string): string {
 export function TripHistory({
   trips,
   perspective,
+  ratings,
 }: {
   trips: Doc<"rides">[];
   perspective: "rider" | "driver";
+  /** Per-ride star ratings (rideId → 1–5), shown on completed trips. */
+  ratings?: Record<string, number>;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -157,6 +161,27 @@ export function TripHistory({
                     <span className="truncate">{t.dropoff.address}</span>
                   </p>
                 </div>
+
+                {done && ratings?.[t._id] && (
+                  <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-slate-950/40 px-2.5 py-1.5 ring-1 ring-white/5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      {perspective === "driver" ? "Rider rating" : "Your rating"}
+                    </span>
+                    <span className="ml-auto flex items-center gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          className={cn(
+                            "size-3",
+                            i < (ratings[t._id] ?? 0)
+                              ? "fill-amber-300 text-amber-300"
+                              : "text-slate-600",
+                          )}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                )}
 
                 {done && perspective === "driver" && (
                   <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-2.5 py-1.5 text-[11px] ring-1 ring-white/5">

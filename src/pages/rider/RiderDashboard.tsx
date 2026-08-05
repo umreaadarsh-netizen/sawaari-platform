@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import {
   GOTEGAON,
@@ -64,6 +64,14 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   completed: { label: "Completed", cls: "border-white/15 bg-white/5 text-slate-300" },
 };
 
+const STAR_LABEL: Record<number, string> = {
+  1: "Poor — needs work",
+  2: "Fair",
+  3: "Good",
+  4: "Great ride",
+  5: "Excellent!",
+};
+
 function toDateTimeLocal(d: Date): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
     .toISOString()
@@ -84,6 +92,7 @@ export default function RiderDashboard() {
   const nearby = useQuery(api.drivers.nearbyDrivers);
   const fleet = useQuery(api.fleet.listFleet);
   const myTrips = useQuery(api.rides.myRides);
+  const myRatings = useQuery(api.ratings.myRatings);
   const driverDoc = useQuery(
     api.drivers.getDriver,
     activeRide?.driverId ? { userId: activeRide.driverId } : "skip",
@@ -105,10 +114,25 @@ export default function RiderDashboard() {
   const [chatOpen, setChatOpen] = useState(true);
   const [locating, setLocating] = useState(false);
   const [panelTab, setPanelTab] = useState<"book" | "history">("book");
+  // The completed trip being rated right after payment — opens the rating modal.
+  const [ratingTarget, setRatingTarget] = useState<{
+    rideId: Id<"rides">;
+    driverName: string;
+  } | null>(null);
   const suggest = useLocationSuggest();
 
   const ride = activeRide ?? null;
   const now = useNow();
+
+  // rideId → stars this rider gave, so trip history can show their ratings.
+  const ratingsByRide = useMemo(() => {
+    const map: Record<string, number> = {};
+    (myRatings ?? []).forEach((r) => {
+      map[r.rideId] = r.rating;
+    });
+    return map;
+  }, [myRatings]);
+
   const vehicles = (fleet ?? []).filter((v) => v.enabled);
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
 
@@ -397,6 +421,12 @@ export default function RiderDashboard() {
               chatOpen={chatOpen}
               setChatOpen={setChatOpen}
               onCancel={handleCancel}
+              onPaid={(settledRide) =>
+                setRatingTarget({
+                  rideId: settledRide._id,
+                  driverName: settledRide.driverName ?? "your driver",
+                })
+              }
               userId={user?._id ?? ""}
             />
           ) : (
@@ -426,7 +456,11 @@ export default function RiderDashboard() {
                 </div>
               </div>
               {panelTab === "history" ? (
-                <TripHistory trips={myTrips ?? []} perspective="rider" />
+                <TripHistory
+                  trips={myTrips ?? []}
+                  perspective="rider"
+                  ratings={ratingsByRide}
+                />
               ) : (
                 <BookingView
                   pickup={pickup}
@@ -469,6 +503,10 @@ export default function RiderDashboard() {
           )}
         </aside>
       </div>
+
+      {ratingTarget && (
+        <RateDriverModal target={ratingTarget} onClose={() => setRatingTarget(null)} />
+      )}
     </div>
   );
 }
@@ -848,6 +886,7 @@ function RideView({
   chatOpen,
   setChatOpen,
   onCancel,
+  onPaid,
   userId,
 }: {
   ride: Doc<"rides">;
@@ -859,6 +898,7 @@ function RideView({
   chatOpen: boolean;
   setChatOpen: (open: boolean) => void;
   onCancel: () => void;
+  onPaid: (ride: Doc<"rides">) => void;
   userId: string;
 }) {
   const completed = ride.status === "completed";
@@ -970,7 +1010,7 @@ function RideView({
           </div>
         </div>
       ) : completed ? (
-        <CheckoutCard ride={ride} vehicle={vehicle} />
+        <CheckoutCard ride={ride} vehicle={vehicle} onPaid={onPaid} />
       ) : (
         <>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1155,9 +1195,11 @@ function SystemQr({ size = 148 }: { size?: number }) {
 function CheckoutCard({
   ride,
   vehicle,
+  onPaid,
 }: {
   ride: Doc<"rides">;
   vehicle: FleetVehicle | null;
+  onPaid: (ride: Doc<"rides">) => void;
 }) {
   const payRide = useMutation(api.rides.payRide);
   const [method, setMethod] = useState<"upi" | "card" | "qr" | "cash">("upi");
@@ -1175,6 +1217,7 @@ function CheckoutCard({
       await new Promise((r) => setTimeout(r, 900));
       await payRide({ rideId: ride._id, method });
       toast.success("Payment successful — receipt issued.");
+      onPaid(ride);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Payment could not be processed.");
     }
@@ -1311,6 +1354,127 @@ function CheckoutCard({
         A receipt is issued instantly. QR, UPI and card fares are captured by
         the SAWAARI platform; cash is settled directly with your driver.
       </p>
+    </div>
+  );
+}
+
+// ---- rating ---------------------------------------------------------------
+
+/**
+ * Post-payment rating prompt: the rider rates their driver once (stars +
+ * optional note). The rating rolls into the driver's live average and shows
+ * up in both dashboards' trip history.
+ */
+function RateDriverModal({
+  target,
+  onClose,
+}: {
+  target: { rideId: Id<"rides">; driverName: string };
+  onClose: () => void;
+}) {
+  const rateDriver = useMutation(api.ratings.rateDriver);
+  const [stars, setStars] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (stars < 1) return;
+    setSubmitting(true);
+    try {
+      await rateDriver({
+        rideId: target.rideId,
+        rating: stars,
+        comment: comment.trim() || undefined,
+      });
+      toast.success("Thanks! Your rating helps the SAWAARI community.");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't submit your rating.");
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/95 p-6 shadow-2xl shadow-black/60">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            Trip feedback
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close rating prompt"
+            className="rounded-full p-1 text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <h2 className="mt-2 font-display text-lg font-semibold text-white">
+          How was your ride with {target.driverName}?
+        </h2>
+        <p className="mt-1 text-xs leading-relaxed text-slate-400">
+          Your rating updates their public score and helps other riders pick a
+          great auto.
+        </p>
+
+        <div className="mt-4 flex justify-center gap-1.5">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-label={`${n} star${n === 1 ? "" : "s"}`}
+              onClick={() => setStars(n)}
+              onMouseEnter={() => setHover(n)}
+              onMouseLeave={() => setHover(0)}
+              className="transition-transform hover:scale-125"
+            >
+              <Star
+                className={cn(
+                  "size-8 transition-colors",
+                  (hover || stars) >= n
+                    ? "fill-amber-300 text-amber-300"
+                    : "text-slate-600",
+                )}
+              />
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-center text-[11px] font-semibold text-amber-300">
+          {stars > 0 ? STAR_LABEL[stars] : "Tap a star to rate"}
+        </p>
+
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, 300))}
+          placeholder="Share a note for your driver (optional)…"
+          rows={3}
+          className="mt-4 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-emerald-400/50 focus:outline-none"
+        />
+
+        <Button
+          type="button"
+          onClick={() => void handleSubmit()}
+          disabled={stars < 1 || submitting}
+          className="mt-4 w-full bg-emerald-500 py-4 text-sm font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Submitting…
+            </>
+          ) : (
+            "Submit rating"
+          )}
+        </Button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-2 w-full text-center text-[11px] font-medium text-slate-500 transition-colors hover:text-slate-300"
+        >
+          Not now — skip
+        </button>
+      </div>
     </div>
   );
 }

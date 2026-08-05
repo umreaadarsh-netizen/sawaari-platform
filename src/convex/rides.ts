@@ -153,7 +153,13 @@ export const activeRide = query({
         .withIndex("by_rider_created", (q) => q.eq("riderId", user._id))
         .order("desc")
         .take(10);
-      return rides.find((r) => isActive(r.status)) ?? null;
+      const active = rides.find((r) => isActive(r.status));
+      if (active) return active;
+      // Hold the newest completed-but-unpaid trip on screen so the checkout
+      // card can settle the fare. The moment it's paid it drops off this
+      // query and the rider is free to book again. (Lifecycle codes are
+      // already spent by this stage, so nothing sensitive is exposed.)
+      return rides.find((r) => r.status === "completed" && !r.paid) ?? null;
     }
 
     // The driver never sees the codes through data — they must ask the rider.
