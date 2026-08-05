@@ -1,0 +1,17 @@
+{
+  "name": "Sawaari — Electric Autos, on Demand",
+  "short_name": "Sawaari",
+  "description": "EV auto ride-hailing with transparent fares, live driver tracking and in-ride chat.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
