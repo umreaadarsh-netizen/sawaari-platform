@@ -83,6 +83,44 @@ export const BENGALURU: LatLng = { lat: 12.9716, lng: 77.5946 };
 export const GOTEGAON: LatLng = { lat: 22.92, lng: 79.18 };
 export const GOTEGAON_ADDRESS = "Gotegaon, Madhya Pradesh, India";
 
+// ---- OSRM road routing (keyless public API) -------------------------------
+
+const osrmCache = new Map<string, [number, number][]>();
+
+/**
+ * Fetch a real road route between two points from the public OSRM demo
+ * server (CORS-enabled, no key). Falls back to the curved `buildRoutePath`
+ * estimate if the network/routing is unavailable, and caches by coordinates.
+ */
+export async function fetchOsrmRoute(a: LatLng, b: LatLng): Promise<[number, number][]> {
+  const key = `${a.lat.toFixed(4)},${a.lng.toFixed(4)}->${b.lat.toFixed(4)},${b.lng.toFixed(4)}`;
+  const cached = osrmCache.get(key);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`,
+    );
+    if (!res.ok) throw new Error("OSRM request failed");
+    const data = (await res.json()) as {
+      code?: string;
+      routes?: { geometry?: { coordinates?: [number, number][] } }[];
+    };
+    const coords = data?.routes?.[0]?.geometry?.coordinates;
+    if (data.code !== "Ok" || !coords || coords.length < 2) {
+      throw new Error("No route returned");
+    }
+    // OSRM returns [lng, lat]; Leaflet wants [lat, lng].
+    const path = coords.map(([lng, lat]) => [lat, lng] as [number, number]);
+    osrmCache.set(key, path);
+    return path;
+  } catch {
+    const fallback = buildRoutePath(a, b);
+    osrmCache.set(key, fallback);
+    return fallback;
+  }
+}
+
 /** Rough bounding box covering India (lat/lng). */
 export const INDIA_BOUNDS = {
   south: 6.5,

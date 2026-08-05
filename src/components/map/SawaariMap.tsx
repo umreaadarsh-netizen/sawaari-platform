@@ -16,11 +16,14 @@ interface SawaariMapProps {
   center?: [number, number];
   zoom?: number;
   markers?: MapMarker[];
+  /** The trip route (e.g. pickup → drop-off). Drawn as the solid emerald line. */
   route?: [number, number][];
+  /** Live approach vector (e.g. driver → pickup). Drawn as the dashed amber line. */
+  approachRoute?: [number, number][];
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
   interactive?: boolean;
-  /** When this key changes, the map flies/fits to the current markers + route. */
+  /** When this key changes, the map flies/fits to the current markers + routes. */
   focusKey?: string;
 }
 
@@ -53,6 +56,7 @@ export function SawaariMap({
   zoom = 13,
   markers = [],
   route,
+  approachRoute,
   onMapClick,
   className,
   interactive = true,
@@ -62,10 +66,11 @@ export function SawaariMap({
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const routeRef = useRef<L.Polyline[]>([]);
+  const approachRef = useRef<L.Polyline[]>([]);
   const onMapClickRef = useRef(onMapClick);
-  const latestRef = useRef({ markers, route });
+  const latestRef = useRef({ markers, route, approachRoute });
   onMapClickRef.current = onMapClick;
-  latestRef.current = { markers, route };
+  latestRef.current = { markers, route, approachRoute };
 
   const svgRenderer = useMemo(() => L.svg(), []);
 
@@ -128,7 +133,7 @@ export function SawaariMap({
     });
   }, [markers]);
 
-  // ---- route --------------------------------------------------------------
+  // ---- trip route ---------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -153,12 +158,39 @@ export function SawaariMap({
     }
   }, [route, svgRenderer]);
 
+  // ---- approach vector ----------------------------------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    approachRef.current.forEach((p) => p.remove());
+    approachRef.current = [];
+    if (approachRoute && approachRoute.length >= 2) {
+      const casing = L.polyline(approachRoute, {
+        color: "#78350f",
+        weight: 7,
+        opacity: 0.7,
+        dashArray: "1 10",
+        lineCap: "round",
+        renderer: svgRenderer,
+      }).addTo(map);
+      const line = L.polyline(approachRoute, {
+        color: "#fbbf24",
+        weight: 3,
+        opacity: 0.95,
+        dashArray: "6 8",
+        lineCap: "round",
+        renderer: svgRenderer,
+      }).addTo(map);
+      approachRef.current = [casing, line];
+    }
+  }, [approachRoute, svgRenderer]);
+
   // ---- focus --------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focusKey) return;
-    const { markers: ms, route: rt } = latestRef.current;
-    const points = [...ms.map((m) => m.position), ...(rt ?? [])];
+    const { markers: ms, route: rt, approachRoute: ar } = latestRef.current;
+    const points = [...ms.map((m) => m.position), ...(rt ?? []), ...(ar ?? [])];
     const t = window.setTimeout(() => {
       if (points.length >= 2) {
         map.fitBounds(L.latLngBounds(points), {

@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { GOTEGAON, buildRoutePath, formatINR, formatKm } from "@/lib/geo";
+import { useRoadRoute } from "@/hooks/use-road-route";
 import { vehicleById } from "@/lib/fleet";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
@@ -216,14 +217,29 @@ export default function DriverDashboard() {
     return list;
   }, [ride, focusRequest, online, myProfile]);
 
+  // Real road route (OSRM) once the trip is active; fall back to the curved
+  // estimate while it loads or when previewing a request.
+  const roadRoute = useRoadRoute(
+    ride ? ride.pickup : null,
+    ride ? ride.dropoff : null,
+    Boolean(ride),
+  );
   const route = useMemo(() => {
-    if (ride) return buildRoutePath(ride.pickup, ride.dropoff);
+    if (ride) return roadRoute ?? buildRoutePath(ride.pickup, ride.dropoff);
     if (focusRequest) return buildRoutePath(focusRequest.pickup, focusRequest.dropoff);
     return undefined;
-  }, [ride, focusRequest]);
+  }, [ride, roadRoute, focusRequest]);
+
+  // Live approach vector: this driver's own position → pickup while heading
+  // over — the same vector the rider sees, kept in sync over the live stream.
+  const approachRoute = useMemo(() => {
+    if (!ride || !myProfile?.location) return undefined;
+    if (!["accepted", "arriving"].includes(ride.status)) return undefined;
+    return buildRoutePath(myProfile.location, ride.pickup);
+  }, [ride, myProfile?.location]);
 
   const focusKey = ride
-    ? `ride-${ride._id}-${ride.status}`
+    ? `ride-${ride._id}-${ride.status}-${myProfile?.location?.lat ?? ""}`
     : focusRequest
       ? `req-${focusRequest._id}`
       : "idle";
@@ -243,6 +259,7 @@ export default function DriverDashboard() {
             zoom={13}
             markers={markers}
             route={route}
+            approachRoute={approachRoute}
             focusKey={focusKey}
             className="h-full"
           />

@@ -17,6 +17,7 @@ import {
 } from "@/lib/geo";
 import { vehicleById, type FleetVehicle } from "@/lib/fleet";
 import { reverseGeocode, useLocationSuggest } from "@/hooks/use-location-suggest";
+import { useRoadRoute } from "@/hooks/use-road-route";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
@@ -271,11 +272,26 @@ export default function RiderDashboard() {
     return list;
   }, [ride, pickup, dropoff, nearby, driverDoc]);
 
+  // Real road route (OSRM) for the trip once a ride is active; fall back to
+  // the curved estimate while it loads or for the pre-booking preview.
+  const roadRoute = useRoadRoute(
+    ride ? ride.pickup : null,
+    ride ? ride.dropoff : null,
+    Boolean(ride),
+  );
   const route = useMemo(() => {
-    if (ride) return buildRoutePath(ride.pickup, ride.dropoff);
+    if (ride) return roadRoute ?? buildRoutePath(ride.pickup, ride.dropoff);
     if (pickup && dropoff) return buildRoutePath(pickup, dropoff);
     return undefined;
-  }, [ride, pickup, dropoff]);
+  }, [ride, roadRoute, pickup, dropoff]);
+
+  // Live approach vector: driver's current position → pickup while the driver
+  // heads over (streamed in real time via the driver's location updates).
+  const approachRoute = useMemo(() => {
+    if (!ride || !driverDoc?.location) return undefined;
+    if (!["accepted", "arriving"].includes(ride.status)) return undefined;
+    return buildRoutePath(driverDoc.location, ride.pickup);
+  }, [ride, driverDoc?.location]);
 
   // Coordinate-aware so a fresh GPS fix (even on the same field) re-centers
   // the map and drops an active pickup marker on the detected point.
@@ -326,12 +342,19 @@ export default function RiderDashboard() {
             zoom={13}
             markers={markers}
             route={route}
+            approachRoute={approachRoute}
             onMapClick={handleMapClick}
             focusKey={focusKey}
             className="h-full"
           />
 
           <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap items-center justify-center gap-2 px-3">
+            {ride && approachRoute && (
+              <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-amber-300 backdrop-blur-xl">
+                <Navigation className="size-3" />
+                Driver approaching pickup — live
+              </span>
+            )}
             {!ride && (
               <span className="rounded-full border border-white/15 bg-slate-950/70 px-3 py-1.5 text-[11px] font-medium text-slate-300 backdrop-blur-xl">
                 <MapPin className="mr-1 inline size-3 text-emerald-300" />
