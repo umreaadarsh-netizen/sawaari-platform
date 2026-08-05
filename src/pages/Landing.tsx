@@ -296,7 +296,7 @@ function LocalRoutes() {
       </motion.div>
 
       <motion.div {...fadeUp} className="mx-auto mt-10 max-w-md">
-        <div className="glass relative rounded-full">
+        <div className="liquid-glass border border-white/20 relative rounded-full">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
           <input
             value={query}
@@ -326,9 +326,9 @@ function LocalRoutes() {
                 {...fadeUp}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
                 className={cn(
-                  "glass group relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-300",
+                  "liquid-glass border border-white/20 group relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-300",
                   active
-                    ? "border-emerald-300/45 ring-1 ring-emerald-300/20"
+                    ? "border-emerald-300/45 bg-emerald-400/5 ring-1 ring-emerald-300/20"
                     : "hover:-translate-y-0.5 hover:border-emerald-300/25",
                 )}
               >
@@ -376,7 +376,7 @@ function LocalRoutes() {
         </div>
 
         {/* live fare preview */}
-        <div className="glass-strong sticky top-28 overflow-hidden rounded-3xl p-6">
+        <div className="liquid-glass border border-white/20 sticky top-28 overflow-hidden rounded-3xl p-6">
           {selected ? (
             <>
               <div className="flex items-center justify-between gap-2">
@@ -511,7 +511,7 @@ function Capabilities() {
             key={title}
             {...fadeUp}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="glass group relative overflow-hidden rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
+            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
           >
             <div className="absolute -right-14 -top-14 size-36 rounded-full bg-emerald-400/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
             <span className="glass-strong grid size-13 w-13 place-items-center rounded-2xl text-emerald-300 transition-transform duration-300 group-hover:scale-105">
@@ -559,7 +559,7 @@ function FleetSection() {
       </motion.div>
 
       <motion.div {...fadeUp} className="mx-auto mt-10 max-w-md">
-        <div className="glass relative rounded-full">
+        <div className="liquid-glass border border-white/20 relative rounded-full">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
           <input
             value={query}
@@ -581,7 +581,7 @@ function FleetSection() {
             key={v.id}
             {...fadeUp}
             transition={{ duration: 0.5, delay: i * 0.08 }}
-            className="glass group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
+            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
           >
             <div className="flex items-start justify-between">
               <span className="glass-strong grid size-12 place-items-center rounded-2xl text-emerald-300">
@@ -658,7 +658,7 @@ function HowItWorks() {
             key={step}
             {...fadeUp}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="glass relative overflow-hidden rounded-3xl p-8"
+            className="liquid-glass border border-white/20 relative overflow-hidden rounded-3xl p-8"
           >
             <span className="absolute right-6 top-4 font-serif text-6xl italic text-white/[0.06]">
               {step}
@@ -721,7 +721,7 @@ function DriverSection() {
             {perks.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="glass flex items-start gap-3.5 rounded-2xl p-4 transition-colors hover:border-emerald-300/25"
+                className="liquid-glass border border-white/20 flex items-start gap-3.5 rounded-2xl p-4 transition-colors hover:border-emerald-300/25"
               >
                 <span className="glass-strong grid size-10 shrink-0 place-items-center rounded-xl text-emerald-300">
                   <Icon className="size-5" />
@@ -750,7 +750,7 @@ function DriverSection() {
           transition={{ duration: 0.6, delay: 0.15 }}
           className="relative"
         >
-          <div className="glass-strong rounded-[2rem] p-7">
+          <div className="liquid-glass border border-white/20 rounded-[2rem] p-7">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -836,7 +836,7 @@ function Faq() {
             <AccordionItem
               key={item.q}
               value={item.q}
-              className="glass rounded-2xl px-6 data-[state=open]:border-emerald-300/25"
+              className="liquid-glass border border-white/20 rounded-2xl px-6 data-[state=open]:border-emerald-300/25"
             >
               <AccordionTrigger className="text-left text-sm font-semibold text-white hover:no-underline">
                 {item.q}
@@ -859,7 +859,7 @@ function FinalCta() {
     <section className="relative mx-auto max-w-5xl px-5 pb-24 pt-4 sm:px-8">
       <motion.div
         {...fadeUp}
-        className="glass-strong relative overflow-hidden rounded-[2.5rem] p-10 text-center sm:p-14"
+        className="liquid-glass border border-white/20 relative overflow-hidden rounded-[2.5rem] p-10 text-center sm:p-14"
       >
         <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[480px] -translate-x-1/2 rounded-full bg-emerald-400/20 blur-[100px]" />
         <p className="glass-chip relative inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
