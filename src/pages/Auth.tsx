@@ -1,8 +1,10 @@
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/hooks/use-auth";
 import { SawaariMark } from "@/components/SawaariLogo";
+import { useAction } from "convex/react";
 import {
   ArrowRight,
   CarFront,
@@ -36,6 +38,8 @@ type Method = "phone" | "email";
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+  const sendOtp = useAction(api.phoneOtp.sendOtp);
+  const verifyOtp = useAction(api.phoneOtp.verifyOtp);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -50,7 +54,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const [phone, setPhone] = useState("");
   const [phoneStep, setPhoneStep] = useState<"input" | "otp">("input");
   const [phoneOtp, setPhoneOtp] = useState("");
+  const [otpMode, setOtpMode] = useState<"sms" | "demo" | null>(null);
   const [sentCode, setSentCode] = useState<string | null>(null);
+  const [maskedPhone, setMaskedPhone] = useState("");
   const [resendIn, setResendIn] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
@@ -110,7 +116,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const subtitle =
     method === "phone"
       ? phoneStep === "otp"
-        ? `We sent a 6-digit code to +91 ${phone}`
+        ? `We sent a 6-digit code to ${maskedPhone || `+91 ${phone}`}`
         : "Sign in to continue to Sawaari"
       : emailStep === "signIn"
         ? "No password needed — we email a one-time code."
@@ -118,41 +124,66 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
   // ---- phone OTP ----------------------------------------------------------
 
-  const sendPhoneOtp = (event: React.FormEvent<HTMLFormElement>) => {
+  const sendPhoneOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsLoading(true);
     setError(null);
-    const digits = phone.replace(/\D/g, "");
-    if (!/^[6-9]\d{9}$/.test(digits)) {
-      setError("Enter a valid 10-digit Indian mobile number.");
-      return;
+    try {
+      const result = await sendOtp({ phone });
+      setOtpMode(result.mode);
+      setSentCode(result.mode === "demo" ? result.code : null);
+      setMaskedPhone(result.maskedPhone);
+      setPhoneOtp("");
+      setResendIn(60);
+      setPhoneStep("otp");
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to send the code. Please try again.",
+      );
+    } finally {
+      setIsLoading(false);
     }
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setSentCode(code);
-    setPhoneOtp("");
-    setResendIn(60);
-    setPhoneStep("otp");
   };
 
-  const resendCode = () => {
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setSentCode(code);
-    setPhoneOtp("");
-    setResendIn(60);
+  const resendCode = async () => {
+    setIsLoading(true);
     setError(null);
+    try {
+      const result = await sendOtp({ phone });
+      setOtpMode(result.mode);
+      setSentCode(result.mode === "demo" ? result.code : null);
+      setMaskedPhone(result.maskedPhone);
+      setPhoneOtp("");
+      setResendIn(60);
+    } catch (error) {
+      console.error("Resend OTP error:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to resend the code. Please try again.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const verifyPhoneOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (phoneOtp.length !== 6) return;
-    if (phoneOtp !== sentCode) {
-      setError("The code you entered doesn't match. Please try again.");
-      setPhoneOtp("");
-      setShakeKey((k) => k + 1);
-      return;
-    }
     setIsLoading(true);
     setError(null);
     try {
+      const result = await verifyOtp({ phone, code: phoneOtp });
+      if (!result.valid) {
+        setError("The code you entered doesn't match. Please try again.");
+        setPhoneOtp("");
+        setShakeKey((k) => k + 1);
+        setIsLoading(false);
+        return;
+      }
       await signIn("anonymous");
       navigate(target);
     } catch (error) {
@@ -413,13 +444,19 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               key={shakeKey}
               className={cn("mt-5", shakeKey > 0 && "sawa-shake")}
             >
-              {/* demo chip — no SMS gateway is connected in this build */}
-              <div className="mx-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-center text-xs text-emerald-200">
-                Demo mode — your code is{" "}
-                <span className="font-mono text-sm font-bold tracking-[0.2em]">
-                  {sentCode}
-                </span>
-              </div>
+              {otpMode === "demo" ? (
+                /* no Vonage credentials yet — surface the code for testing */
+                <div className="mx-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-center text-xs text-emerald-200">
+                  Demo mode — your code is{" "}
+                  <span className="font-mono text-sm font-bold tracking-[0.2em]">
+                    {sentCode}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-center text-xs text-slate-500">
+                  An SMS with your code is on its way to {maskedPhone}.
+                </p>
+              )}
 
               <div className="mt-4 flex justify-center">
                 <InputOTP

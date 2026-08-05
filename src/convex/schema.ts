@@ -123,6 +123,18 @@ const schema = defineSchema(
       enabled: v.boolean(),
       sort: v.number(),
     }).index("by_vehicle_id", ["id"]),
+
+    // Phone OTP codes for SMS login (delivered via Vonage). Codes are stored
+    // hashed with a per-code salt, expire after 10 minutes and are limited to
+    // a handful of verification attempts per phone.
+    phoneOtps: defineTable({
+      phone: v.string(), // E.164-ish, e.g. "919876543210"
+      codeHash: v.string(),
+      salt: v.string(),
+      expiresAt: v.number(),
+      attempts: v.number(),
+      createdAt: v.number(),
+    }).index("by_phone", ["phone"]),
   },
   {
     schemaValidation: false,
