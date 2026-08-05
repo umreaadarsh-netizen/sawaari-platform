@@ -22,9 +22,16 @@ export function haversineKm(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/** Transparent fare: ₹30 base + ₹14/km, minimum ₹35, rounded to ₹5. */
-export function estimateFare(distanceKm: number): number {
-  return Math.max(35, Math.round((30 + 14 * distanceKm) / 5) * 5);
+export interface FareRates {
+  baseFare: number;
+  perKm: number;
+  minFare: number;
+}
+
+/** Transparent fare from a fleet card: base + per-km, minimum, rounded to ₹5. */
+export function estimateFare(distanceKm: number, rates: FareRates): number {
+  const raw = rates.baseFare + rates.perKm * distanceKm;
+  return Math.max(rates.minFare, Math.round(Math.max(raw, rates.minFare) / 5) * 5);
 }
 
 export function formatINR(n: number): string {

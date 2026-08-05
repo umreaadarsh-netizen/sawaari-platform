@@ -82,7 +82,7 @@ export function ChatPanel({
         })}
         {messages?.length === 0 && (
           <p className="pt-6 text-center text-xs text-slate-500">
-            Say hello to your driver 👋
+            Messages between you and your driver appear here.
           </p>
         )}
       </div>

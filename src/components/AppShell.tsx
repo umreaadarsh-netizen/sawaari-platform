@@ -1,22 +1,12 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import {
-  LogOut,
-  MapPinned,
-  CarTaxiFront,
-  Wifi,
-} from "lucide-react";
+import { LogOut, MapPinned, CarTaxiFront, ShieldCheck, Wifi } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SawaariLogo } from "@/components/SawaariLogo";
 
-export type DashMode = "rider" | "driver";
-
-const MODES: { key: DashMode; label: string; icon: typeof MapPinned }[] = [
-  { key: "rider", label: "Rider", icon: MapPinned },
-  { key: "driver", label: "Driver", icon: CarTaxiFront },
-];
+export type DashMode = "rider" | "driver" | "admin";
 
 export function AppShell({
   mode,
@@ -27,9 +17,17 @@ export function AppShell({
 }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = user?.role === "admin";
 
-  const displayName =
-    user?.name ?? user?.email?.split("@")[0] ?? "Guest";
+  const modes: { key: DashMode; label: string; icon: typeof MapPinned }[] = [
+    { key: "rider", label: "Rider", icon: MapPinned },
+    { key: "driver", label: "Driver", icon: CarTaxiFront },
+  ];
+  if (isAdmin) {
+    modes.push({ key: "admin", label: "Admin", icon: ShieldCheck });
+  }
+
+  const displayName = user?.name ?? user?.email?.split("@")[0] ?? "Guest";
   const initial = displayName.slice(0, 1).toUpperCase();
 
   const handleSignOut = async () => {
@@ -48,7 +46,14 @@ export function AppShell({
         >
           <SawaariLogo markClassName="size-8" />
         </button>
-        <span className="hidden rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-emerald-300 sm:inline-flex">
+        <span
+          className={cn(
+            "hidden rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider sm:inline-flex",
+            mode === "admin"
+              ? "border-sky-400/30 bg-sky-400/10 text-sky-300"
+              : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
+          )}
+        >
           {mode} mode
         </span>
       </div>
@@ -64,7 +69,7 @@ export function AppShell({
         </span>
 
         <div className="flex rounded-full border border-white/10 bg-white/5 p-1">
-          {MODES.map(({ key, label, icon: Icon }) => (
+          {modes.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -72,7 +77,9 @@ export function AppShell({
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all",
                 mode === key
-                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                  ? key === "admin"
+                    ? "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30"
+                    : "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
                   : "text-slate-400 hover:text-slate-200",
               )}
             >
@@ -93,7 +100,7 @@ export function AppShell({
               {displayName}
             </p>
             <p className="text-[10px] text-slate-500">
-              {mode === "rider" ? "Passenger" : "EV driver"}
+              {mode === "rider" ? "Customer" : mode === "driver" ? "EV driver" : "Administrator"}
             </p>
           </div>
           <Button

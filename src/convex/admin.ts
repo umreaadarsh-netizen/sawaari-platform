@@ -1,0 +1,96 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { getCurrentUser } from "./users";
+
+const ACTIVE = ["requested", "accepted", "arriving", "in_progress"] as const;
+
+const requireAdmin = async (ctx: Parameters<typeof getCurrentUser>[0]) => {
+  const user = await getCurrentUser(ctx);
+  if (!user) throw new Error("Please sign in.");
+  if (user.role !== "admin") throw new Error("Administrator access required.");
+  return user;
+};
+
+/** The first person to open the admin area becomes its administrator.
+ *  Afterwards, admins can grant the role from the Users tab. */
+export const becomeAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Please sign in.");
+    const existing = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "admin"))
+      .first();
+    if (existing) {
+      throw new Error("This workspace already has an administrator.");
+    }
+    await ctx.db.patch(user._id, { role: "admin" });
+  },
+});
+
+export const setUserRole = mutation({
+  args: { userId: v.id("users"), role: v.union(v.literal("admin"), v.literal("user")) },
+  handler: async (ctx, { userId, role }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(userId, { role });
+  },
+});
+
+export const adminCancelRide = mutation({
+  args: { rideId: v.id("rides") },
+  handler: async (ctx, { rideId }) => {
+    await requireAdmin(ctx);
+    const ride = await ctx.db.get(rideId);
+    if (!ride) throw new Error("Ride not found.");
+    if (!(ACTIVE as readonly string[]).includes(ride.status)) {
+      throw new Error("Only active rides can be cancelled.");
+    }
+    await ctx.db.patch(rideId, { status: "cancelled" });
+  },
+});
+
+export const adminStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rides = await ctx.db.query("rides").order("desc").take(500);
+    const drivers = await ctx.db.query("drivers").take(500);
+    const users = await ctx.db.query("users").take(500);
+    const completed = rides.filter((r) => r.status === "completed");
+    return {
+      totalRides: rides.length,
+      activeRides: rides.filter((r) => (ACTIVE as readonly string[]).includes(r.status)).length,
+      completedRides: completed.length,
+      revenue: completed.reduce((sum, r) => sum + r.fare, 0),
+      onlineDrivers: drivers.filter((d) => d.online).length,
+      totalDrivers: drivers.length,
+      totalUsers: users.length,
+    };
+  },
+});
+
+export const listAllRides = query({
+  args: { status: v.optional(v.string()) },
+  handler: async (ctx, { status }) => {
+    await requireAdmin(ctx);
+    const rides = await ctx.db.query("rides").order("desc").take(100);
+    return status ? rides.filter((r) => r.status === status) : rides;
+  },
+});
+
+export const listAllDrivers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("drivers").order("desc").take(100);
+  },
+});
+
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("users").order("desc").take(100);
+  },
+});

@@ -13,6 +13,7 @@ import {
   formatKm,
   haversineKm,
 } from "@/lib/geo";
+import { vehicleById, type FleetVehicle } from "@/lib/fleet";
 import { reverseGeocode, useLocationSuggest } from "@/hooks/use-location-suggest";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
@@ -23,12 +24,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
+import { format } from "date-fns";
 import {
   ArrowRight,
+  CalendarClock,
   CarFront,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Flag,
+  History,
   Loader2,
   LocateFixed,
   MapPin,
@@ -45,12 +50,27 @@ import {
 type Field = "pickup" | "dropoff";
 
 const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-  requested: { label: "Matching driver…", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
+  requested: { label: "Matching driver", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
   accepted: { label: "Driver assigned", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   arriving: { label: "Driver arrived", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
   in_progress: { label: "On the move", cls: "border-sky-400/30 bg-sky-400/10 text-sky-300" },
   completed: { label: "Completed", cls: "border-white/15 bg-white/5 text-slate-300" },
 };
+
+const HISTORY_LABEL: Record<string, string> = {
+  requested: "Booked",
+  accepted: "Assigned",
+  arriving: "Arrived",
+  in_progress: "On the way",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+function toDateTimeLocal(d: Date): string {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
 
 export default function RiderDashboard() {
   const { user } = useAuth();
@@ -58,6 +78,8 @@ export default function RiderDashboard() {
 
   const activeRide = useQuery(api.rides.activeRide, { side: "rider" });
   const nearby = useQuery(api.drivers.nearbyDrivers);
+  const fleet = useQuery(api.fleet.listFleet);
+  const myTrips = useQuery(api.rides.myRides);
   const driverDoc = useQuery(
     api.drivers.getDriver,
     activeRide?.driverId ? { userId: activeRide.driverId } : "skip",
@@ -70,19 +92,25 @@ export default function RiderDashboard() {
   const [pickupText, setPickupText] = useState("");
   const [dropoffText, setDropoffText] = useState("");
   const [activeField, setActiveField] = useState<Field | null>(null);
+  const [vehicleId, setVehicleId] = useState("classic");
+  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
+  const [scheduledValue, setScheduledValue] = useState(() =>
+    toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000)),
+  );
   const [requesting, setRequesting] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [locating, setLocating] = useState(false);
   const suggest = useLocationSuggest();
 
   const ride = activeRide ?? null;
+  const vehicles = (fleet ?? []).filter((v) => v.enabled);
+  const vehicle = vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
 
-  // ---- booking helpers ----------------------------------------------------
   const farePreview = useMemo(() => {
     if (!pickup || !dropoff) return null;
     const dist = haversineKm(pickup, dropoff);
-    return { dist, fare: estimateFare(dist), eta: etaMinutes(dist) };
-  }, [pickup, dropoff]);
+    return { dist, fare: estimateFare(dist, vehicle), eta: etaMinutes(dist) };
+  }, [pickup, dropoff, vehicle]);
 
   const focusField = (field: Field) => {
     if (activeField !== field) suggest.clear();
@@ -132,19 +160,29 @@ export default function RiderDashboard() {
       setPickup({ address, lat: latitude, lng: longitude });
       setPickupText(address);
     } catch {
-      toast.error("Couldn't find your location. Tap the map instead.");
+      toast.error("Couldn't locate you. Tap the map to set a pickup point.");
     }
     setLocating(false);
   };
 
   const handleRequest = async () => {
     if (!pickup || !dropoff) return;
+    const scheduledFor =
+      scheduleMode === "later" ? new Date(scheduledValue).getTime() : undefined;
+    if (scheduledFor !== undefined && scheduledFor <= Date.now()) {
+      toast.error("Scheduled pickup must be in the future.");
+      return;
+    }
     setRequesting(true);
     try {
-      await requestRide({ pickup, dropoff });
-      toast.success("Ride requested — matching you with a driver…");
+      await requestRide({ pickup, dropoff, vehicleType: vehicle.id, scheduledFor });
+      toast.success(
+        scheduledFor
+          ? `Booking confirmed for ${format(new Date(scheduledFor), "h:mm a")} — matching you with a driver.`
+          : "Booking confirmed — matching you with a driver.",
+      );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't request the ride.");
+      toast.error(e instanceof Error ? e.message : "Couldn't complete the booking.");
     }
     setRequesting(false);
   };
@@ -153,9 +191,9 @@ export default function RiderDashboard() {
     if (!ride) return;
     try {
       await cancelRide({ rideId: ride._id });
-      toast.info("Ride cancelled.");
+      toast.info("Booking cancelled.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't cancel.");
+      toast.error(e instanceof Error ? e.message : "Couldn't cancel the booking.");
     }
   };
 
@@ -218,32 +256,40 @@ export default function RiderDashboard() {
         ? "pickup"
         : "idle";
 
-  // ---- driver ETA ---------------------------------------------------------
   const driverInfo = useMemo(() => {
     if (!ride || !driverDoc?.location) return null;
     if (!["accepted", "arriving", "in_progress"].includes(ride.status)) return null;
-    const target =
-      ride.status === "in_progress" ? ride.dropoff : ride.pickup;
+    if (ride.scheduledFor && ride.scheduledFor > Date.now()) {
+      return {
+        name: driverDoc.name,
+        vehicleNo: driverDoc.vehicleNo,
+        rating: driverDoc.rating,
+        msg: `Pickup scheduled · ${format(new Date(ride.scheduledFor), "h:mm a")}`,
+      };
+    }
+    const target = ride.status === "in_progress" ? ride.dropoff : ride.pickup;
     const dist = haversineKm(driverDoc.location, target);
-    const msg =
-      ride.status === "in_progress"
-        ? `Arriving in ~${etaMinutes(dist)} min`
-        : `Driver is ${formatKm(dist)} away`;
-    return { name: driverDoc.name, vehicleNo: driverDoc.vehicleNo, rating: driverDoc.rating, msg };
+    return {
+      name: driverDoc.name,
+      vehicleNo: driverDoc.vehicleNo,
+      rating: driverDoc.rating,
+      msg:
+        ride.status === "in_progress"
+          ? `Arriving in ~${etaMinutes(dist)} min`
+          : `Driver is ${formatKm(dist)} away`,
+    };
   }, [ride, driverDoc]);
 
   const statusPill = ride ? STATUS_PILL[ride.status] : null;
+  const rideVehicle = ride ? vehicleById(ride.vehicleType) : null;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <AppShell
-        mode="rider"
-        onSwitchMode={(m: DashMode) => navigate(m === "driver" ? "/app/driver" : "/app/rider")}
-      />
+      <AppShell mode="rider" onSwitchMode={(m: DashMode) => navigate(`/app/${m}`)} />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Map */}
-        <main className="relative h-[42vh] lg:order-2 lg:h-auto lg:flex-1">
+        <main className="relative h-[40vh] lg:order-2 lg:h-auto lg:flex-1">
           <SawaariMap
             center={[BENGALURU.lat, BENGALURU.lng]}
             zoom={13}
@@ -254,7 +300,6 @@ export default function RiderDashboard() {
             className="h-full"
           />
 
-          {/* floating chips */}
           <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap items-center justify-center gap-2 px-3">
             {!ride && (
               <span className="rounded-full border border-white/15 bg-slate-950/70 px-3 py-1.5 text-[11px] font-medium text-slate-300 backdrop-blur-xl">
@@ -286,6 +331,7 @@ export default function RiderDashboard() {
           {ride ? (
             <RideView
               ride={ride}
+              vehicle={rideVehicle}
               driverInfo={driverInfo}
               searching={ride.status === "requested"}
               nearbyCount={nearby?.length ?? 0}
@@ -303,9 +349,17 @@ export default function RiderDashboard() {
               activeField={activeField}
               suggestions={suggest.suggestions}
               suggestLoading={suggest.loading}
+              vehicles={vehicles}
+              vehicleId={vehicleId}
+              onVehicleChange={setVehicleId}
+              scheduleMode={scheduleMode}
+              scheduledValue={scheduledValue}
+              onScheduleMode={setScheduleMode}
+              onScheduledValue={setScheduledValue}
               farePreview={farePreview}
               requesting={requesting}
               locating={locating}
+              myTrips={myTrips ?? []}
               onPickupText={(v) => {
                 setPickupText(v);
                 if (pickup) setPickup(null);
@@ -341,9 +395,17 @@ function BookingView(props: {
   activeField: Field | null;
   suggestions: ReturnType<typeof useLocationSuggest>["suggestions"];
   suggestLoading: boolean;
+  vehicles: FleetVehicle[];
+  vehicleId: string;
+  onVehicleChange: (id: string) => void;
+  scheduleMode: "now" | "later";
+  scheduledValue: string;
+  onScheduleMode: (m: "now" | "later") => void;
+  onScheduledValue: (v: string) => void;
   farePreview: { dist: number; fare: number; eta: number } | null;
   requesting: boolean;
   locating: boolean;
+  myTrips: Doc<"rides">[];
   onPickupText: (v: string) => void;
   onDropoffText: (v: string) => void;
   onFocusField: (f: Field) => void;
@@ -360,20 +422,60 @@ function BookingView(props: {
     activeField,
     suggestions,
     suggestLoading,
+    vehicles,
+    vehicleId,
+    scheduleMode,
+    scheduledValue,
     farePreview,
     requesting,
     locating,
+    myTrips,
   } = props;
+  const selectedVehicle =
+    vehicles.find((v) => v.id === vehicleId) ?? vehicleById(vehicleId);
+
+  const minTime = toDateTimeLocal(new Date(Date.now() + 15 * 60 * 1000));
+  const maxTime = toDateTimeLocal(new Date(Date.now() + 48 * 60 * 60 * 1000));
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
       <div>
         <h1 className="font-display text-xl font-semibold tracking-tight text-white">
-          Where to, today?
+          Book an EV rickshaw
         </h1>
         <p className="mt-0.5 text-xs text-slate-400">
-          Transparent fares · 100% electric · live tracking
+          Fixed fares · live tracking · scheduled pickups
         </p>
+      </div>
+
+      {/* vehicle catalog */}
+      <div>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Choose your rickshaw
+        </p>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {vehicles.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => props.onVehicleChange(v.id)}
+              className={cn(
+                "min-w-[132px] rounded-2xl border p-3 text-left transition-all",
+                vehicleId === v.id
+                  ? "border-emerald-400/50 bg-emerald-400/10 ring-2 ring-emerald-400/20"
+                  : "border-white/10 bg-white/5 hover:border-white/20",
+              )}
+            >
+              <p className="text-sm font-semibold text-white">
+                {v.name.replace("Sawaari ", "")}
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium text-emerald-300">
+                ₹{v.baseFare} + ₹{v.perKm}/km
+              </p>
+              <p className="mt-0.5 text-[10px] text-slate-500">{v.seats} seats</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* locations */}
@@ -426,13 +528,55 @@ function BookingView(props: {
         </p>
       )}
 
+      {/* scheduling */}
+      <div className="-mt-1">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Pickup time
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex rounded-full border border-white/10 bg-white/5 p-1">
+            {(["now", "later"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => props.onScheduleMode(m)}
+                className={cn(
+                  "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
+                  scheduleMode === m
+                    ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                    : "text-slate-400 hover:text-slate-200",
+                )}
+              >
+                {m === "now" ? "As soon as possible" : "Schedule"}
+              </button>
+            ))}
+          </div>
+          {scheduleMode === "later" && (
+            <input
+              type="datetime-local"
+              value={scheduledValue}
+              min={minTime}
+              max={maxTime}
+              onChange={(e) => props.onScheduledValue(e.target.value)}
+              className="h-9 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-slate-200 [color-scheme:dark] focus:border-emerald-400/50 focus:outline-none"
+            />
+          )}
+        </div>
+        {scheduleMode === "later" && (
+          <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <CalendarClock className="size-3 text-emerald-300" />
+            A driver is confirmed ahead of your scheduled pickup.
+          </p>
+        )}
+      </div>
+
       {/* fare preview */}
       {farePreview ? (
         <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-teal-400/5 p-4">
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-                Estimated fare
+                Estimated fare · {selectedVehicle.name}
               </p>
               <p className="mt-1 font-display text-3xl font-semibold text-white">
                 {formatINR(farePreview.fare)}
@@ -448,13 +592,15 @@ function BookingView(props: {
             </div>
           </div>
           <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
-            <Sparkles className="size-3 text-emerald-300" /> All-electric EV auto ·
-            ₹30 base + ₹14/km
+            <Sparkles className="size-3 text-emerald-300" /> All-electric fleet ·
+            ₹{selectedVehicle.baseFare} base + ₹{selectedVehicle.perKm}/km · no surge
+            pricing
           </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs text-slate-500">
-          Set pickup and drop-off to see your fare — <span className="text-emerald-300">or tap the map</span>
+          Set a pickup and drop-off to see your fare —{" "}
+          <span className="text-emerald-300">or tap the map</span>
         </div>
       )}
 
@@ -468,18 +614,58 @@ function BookingView(props: {
         >
           {requesting ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Matching you…
+              <Loader2 className="size-4 animate-spin" /> Confirming booking…
             </>
           ) : (
             <>
-              Request Sawaari <ArrowRight className="size-4" />
+              {scheduleMode === "later" ? "Schedule booking" : "Book now"}{" "}
+              <ArrowRight className="size-4" />
             </>
           )}
         </Button>
         <p className="mt-2.5 text-center text-[11px] text-slate-500">
-          No surge pricing. Pay the driver at the end of the trip.
+          The quoted fare is final. Settle by UPI, card or cash at the end of the trip.
         </p>
       </div>
+
+      {/* recent trips */}
+      {myTrips.length > 0 && (
+        <div className="border-t border-white/10 pt-4">
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <History className="size-3" /> Recent trips
+          </p>
+          <div className="space-y-1.5">
+            {myTrips.slice(0, 3).map((t) => (
+              <div
+                key={t._id}
+                className="flex items-center gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2"
+              >
+                <span
+                  className={cn(
+                    "shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                    t.status === "completed"
+                      ? "bg-emerald-400/15 text-emerald-300"
+                      : t.status === "cancelled"
+                        ? "bg-rose-400/15 text-rose-300"
+                        : "bg-white/10 text-slate-400",
+                  )}
+                >
+                  {HISTORY_LABEL[t.status] ?? t.status}
+                </span>
+                <p className="min-w-0 flex-1 truncate text-xs text-slate-300">
+                  {t.pickup.address} → {t.dropoff.address}
+                </p>
+                <p className="shrink-0 text-[11px] text-slate-500">
+                  {format(new Date(t.createdAt), "d MMM")}
+                </p>
+                <p className="shrink-0 text-xs font-semibold text-slate-200">
+                  {formatINR(t.fare)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -575,6 +761,7 @@ function SuggestionList({
 
 function RideView({
   ride,
+  vehicle,
   driverInfo,
   searching,
   nearbyCount,
@@ -584,6 +771,7 @@ function RideView({
   userId,
 }: {
   ride: Doc<"rides">;
+  vehicle: FleetVehicle | null;
   driverInfo: { name: string; vehicleNo: string; rating: number; msg: string } | null;
   searching: boolean;
   nearbyCount: number;
@@ -593,20 +781,24 @@ function RideView({
   userId: string;
 }) {
   const completed = ride.status === "completed";
-  const duration =
-    ride.completedAt && ride.startedAt
-      ? Math.max(1, Math.round((ride.completedAt - ride.startedAt) / 60000))
-      : null;
+  const scheduled = ride.scheduledFor ? ride.scheduledFor > Date.now() : false;
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold tracking-tight text-white">
-            Your ride
+            Your booking
           </h1>
           <p className="mt-0.5 text-xs text-slate-400">
-            Live over WebSocket · both dashboards stay in sync
+            {vehicle ? (
+              <>
+                {vehicle.name} ·{" "}
+                <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+              </>
+            ) : (
+              "Live booking"
+            )}
           </p>
         </div>
         {!completed &&
@@ -616,7 +808,7 @@ function RideView({
               onClick={onCancel}
               className="flex items-center gap-1.5 rounded-full border border-rose-400/25 bg-rose-400/10 px-3 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-400/20"
             >
-              <X className="size-3.5" /> Cancel
+              <X className="size-3.5" /> Cancel booking
             </button>
           )}
       </div>
@@ -634,36 +826,23 @@ function RideView({
           </span>
           <div>
             <p className="font-display text-lg font-semibold text-white">
-              Finding your Sawaari…
+              {scheduled
+                ? `Scheduled for ${format(new Date(ride.scheduledFor!), "h:mm a")}`
+                : "Matching you with a driver…"}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {nearbyCount > 0
-                ? `${nearbyCount} EV driver${nearbyCount === 1 ? "" : "s"} online nearby`
-                : "Waiting for a nearby driver to go online"}
+              {scheduled
+                ? "Your booking is open to nearby drivers and will be confirmed shortly."
+                : nearbyCount > 0
+                  ? `${nearbyCount} EV driver${nearbyCount === 1 ? "" : "s"} online nearby`
+                  : "Waiting for a nearby driver to go online"}
             </p>
           </div>
         </div>
       ) : completed ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-8 text-center">
-          <span className="grid size-16 place-items-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40">
-            <CheckCircle2 className="size-8" />
-          </span>
-          <div>
-            <p className="font-display text-lg font-semibold text-white">
-              Trip complete
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              {formatINR(ride.fare)} · {formatKm(ride.distanceKm)}
-              {duration ? ` · ${duration} min` : ""} — thanks for riding electric ⚡
-            </p>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            You can book another ride from the panel above.
-          </p>
-        </div>
+        <CheckoutCard ride={ride} vehicle={vehicle} userId={userId} />
       ) : (
         <>
-          {/* driver card */}
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="flex items-center gap-3">
               <Avatar className="size-12 ring-2 ring-emerald-400/40">
@@ -681,7 +860,7 @@ function RideView({
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
                   <CarFront className="size-3.5 text-emerald-300" />
-                  {driverInfo?.vehicleNo ?? "EV auto"} ·{" "}
+                  {driverInfo?.vehicleNo ?? "EV rickshaw"} ·{" "}
                   <Zap className="size-3 text-emerald-300" /> electric
                 </p>
               </div>
@@ -720,7 +899,6 @@ function RideView({
             )}
           </div>
 
-          {/* chat */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5">
             <div className="flex items-center justify-between border-b border-white/10 px-3 py-2.5">
               <button
@@ -729,10 +907,7 @@ function RideView({
                 className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-emerald-300"
               >
                 <MessageSquare className="size-4 text-emerald-300" />
-                Chat with driver
-                <span className={cn("text-[10px] text-slate-500", chatOpen && "hidden")}>
-                  (tap to open)
-                </span>
+                Message your driver
               </button>
             </div>
             {chatOpen && (
@@ -741,6 +916,156 @@ function RideView({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ---- checkout -------------------------------------------------------------
+
+const PAY_METHODS = [
+  { id: "upi" as const, label: "UPI" },
+  { id: "card" as const, label: "Card" },
+  { id: "cash" as const, label: "Cash" },
+];
+
+function CheckoutCard({
+  ride,
+  vehicle,
+  userId,
+}: {
+  ride: Doc<"rides">;
+  vehicle: FleetVehicle | null;
+  userId: string;
+}) {
+  const payRide = useMutation(api.rides.payRide);
+  const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
+  const [paying, setPaying] = useState(false);
+
+  const rates = vehicle ?? vehicleById("classic");
+  const baseShown = ride.fare >= rates.baseFare ? rates.baseFare : ride.fare;
+  const distancePortion = ride.fare - baseShown;
+  const receiptId = `SW-${ride._id.slice(-6).toUpperCase()}`;
+
+  const handlePay = async () => {
+    setPaying(true);
+    try {
+      // Simulated gateway handshake for the demo.
+      await new Promise((r) => setTimeout(r, 900));
+      await payRide({ rideId: ride._id, method });
+      toast.success("Payment successful — receipt issued.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Payment could not be processed.");
+    }
+    setPaying(false);
+  };
+
+  if (ride.paid) {
+    return (
+      <div className="flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-6">
+        <span className="grid size-14 place-items-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40">
+          <CheckCircle2 className="size-7" />
+        </span>
+        <div>
+          <p className="font-display text-lg font-semibold text-white">Trip settled</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {formatINR(ride.fare)} · {formatKm(ride.distanceKm)} ·{" "}
+            {PAY_METHODS.find((m) => m.id === ride.paymentMethod)?.label ?? "Paid"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-xs">
+          <div className="flex justify-between text-slate-400">
+            <span>Receipt</span>
+            <span className="font-mono font-semibold text-emerald-300">{receiptId}</span>
+          </div>
+          <div className="mt-2 flex justify-between text-slate-400">
+            <span>Base fare · {rates.name}</span>
+            <span className="text-slate-200">{formatINR(rates.baseFare)}</span>
+          </div>
+          <div className="flex justify-between text-slate-400">
+            <span>Distance · {formatKm(ride.distanceKm)}</span>
+            <span className="text-slate-200">{formatINR(distancePortion)}</span>
+          </div>
+          <div className="mt-2 flex justify-between border-t border-white/10 pt-2 text-sm font-semibold text-white">
+            <span>Total paid</span>
+            <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+          </div>
+        </div>
+        <p className="text-center text-[11px] text-slate-500">
+          Thank you for riding electric with SAWAARI.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Checkout
+        </p>
+        <h2 className="mt-1 font-display text-lg font-semibold text-white">
+          Trip complete — settle your fare
+        </h2>
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/50 p-4 text-xs">          <div className="flex justify-between text-slate-400">
+            <span>Base fare · {rates.name}</span>
+            <span className="text-slate-200">{formatINR(baseShown)}</span>
+          </div>
+          {distancePortion > 0 && (
+            <div className="flex justify-between text-slate-400">
+              <span>Distance · {formatKm(ride.distanceKm)}</span>
+              <span className="text-slate-200">{formatINR(distancePortion)}</span>
+            </div>
+          )}
+        <div className="flex justify-between border-t border-white/10 pt-2 text-sm font-semibold text-white">
+          <span>Total</span>
+          <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Payment method
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {PAY_METHODS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMethod(m.id)}
+              className={cn(
+                "rounded-xl border py-2.5 text-xs font-semibold transition-all",
+                method === m.id
+                  ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-300"
+                  : "border-white/10 bg-white/5 text-slate-400 hover:text-slate-200",
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        onClick={() => void handlePay()}
+        disabled={paying}
+        className="mt-auto w-full bg-emerald-500 py-5 text-[15px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
+      >
+        {paying ? (
+          <>
+            <Loader2 className="size-4 animate-spin" /> Processing payment…
+          </>
+        ) : (
+          <>
+            Pay {formatINR(ride.fare)} <ChevronRight className="size-4" />
+          </>
+        )}
+      </Button>
+      <p className="text-center text-[11px] text-slate-500">
+        A receipt is issued instantly. Cash is settled directly with your driver.
+      </p>
     </div>
   );
 }

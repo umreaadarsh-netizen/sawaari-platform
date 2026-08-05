@@ -3,12 +3,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  BENGALURU,
-  buildRoutePath,
-  formatINR,
-  formatKm,
-} from "@/lib/geo";
+import { BENGALURU, buildRoutePath, formatINR, formatKm } from "@/lib/geo";
+import { vehicleById } from "@/lib/fleet";
 import { AppShell, DashMode } from "@/components/AppShell";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
@@ -20,9 +16,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
+import { format } from "date-fns";
 import {
   ArrowUpCircle,
   BadgeCheck,
+  CalendarClock,
   CarFront,
   CheckCircle2,
   Flag,
@@ -62,9 +60,6 @@ export default function DriverDashboard() {
   const online = myProfile?.online ?? false;
 
   // ---- simulated live drive ----------------------------------------------
-  // The driver dashboard streams its position to Convex every ~2.5s. On the
-  // rider's side this subscription lights up as a live marker moving across
-  // the map — real-time tracking without any extra infra.
   const locationRef = useRef<{ lat: number; lng: number }>(myProfile?.location ?? null);
   useEffect(() => {
     if (myProfile) locationRef.current = myProfile.location;
@@ -76,7 +71,8 @@ export default function DriverDashboard() {
     progress: number;
   } | null>(null);
 
-  // Start a drive leg whenever a ride moves into accepted / in_progress.
+  // Start a drive leg whenever a ride moves into accepted / in_progress,
+  // respecting the scheduled pickup time (auto-starts when it arrives).
   useEffect(() => {
     if (!online || !ride) {
       setLeg(null);
@@ -92,12 +88,20 @@ export default function DriverDashboard() {
       setLeg(null);
       return;
     }
-    const from = locationRef.current ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
-    setLeg({ from: [from.lat, from.lng], to: target, progress: 0 });
+    const startLeg = () => {
+      const from = locationRef.current ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
+      setLeg({ from: [from.lat, from.lng], to: target, progress: 0 });
+    };
+    const delay = ride.scheduledFor ? Math.max(0, ride.scheduledFor - Date.now()) : 0;
+    if (delay > 0) {
+      setLeg(null);
+      const t = window.setTimeout(startLeg, delay + 2000);
+      return () => window.clearTimeout(t);
+    }
+    startLeg();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online, ride?._id, ride?.status]);
 
-  // Advance the leg and stream the position.
   useEffect(() => {
     if (!leg || !ride) return;
     const interval = window.setInterval(() => {
@@ -141,7 +145,7 @@ export default function DriverDashboard() {
     setSavingProfile(true);
     try {
       await saveProfile({ name: form.name, vehicleNo: form.vehicleNo });
-      toast.success("Profile created — welcome to Sawaari!");
+      toast.success("Driver profile created — welcome to SAWAARI.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save profile.");
     }
@@ -154,7 +158,7 @@ export default function DriverDashboard() {
       if (next) {
         const base = myProfile?.location ?? { lat: BENGALURU.lat, lng: BENGALURU.lng };
         await updateLocation({ lat: base.lat, lng: base.lng });
-        toast.success("You're online — requests will stream in live.");
+        toast.success("You're online — ride requests will stream in live.");
       } else {
         toast.info("You're offline.");
       }
@@ -167,9 +171,9 @@ export default function DriverDashboard() {
     try {
       await acceptRide({ rideId });
       setSelectedRequest(null);
-      toast.success("Ride accepted — driving to pickup.");
+      toast.success("Booking accepted.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't accept the ride.");
+      toast.error(e instanceof Error ? e.message : "Couldn't accept the booking.");
     }
   };
 
@@ -182,12 +186,11 @@ export default function DriverDashboard() {
         window.setTimeout(() => setJustCompleted(null), 7000);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't update ride.");
+      toast.error(e instanceof Error ? e.message : "Couldn't update the trip.");
     }
   };
 
   // ---- map data -----------------------------------------------------------
-  const focusRide = ride;
   const focusRequest =
     !ride && selectedRequest
       ? (openRequests ?? []).find((r) => r._id === selectedRequest) ?? null
@@ -230,14 +233,11 @@ export default function DriverDashboard() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <AppShell
-        mode="driver"
-        onSwitchMode={(m: DashMode) => navigate(m === "rider" ? "/app/rider" : "/app/driver")}
-      />
+      <AppShell mode="driver" onSwitchMode={(m: DashMode) => navigate(`/app/${m}`)} />
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {/* Map */}
-        <main className="relative h-[42vh] lg:order-2 lg:h-auto lg:flex-1">
+        <main className="relative h-[40vh] lg:order-2 lg:h-auto lg:flex-1">
           <SawaariMap
             center={[BENGALURU.lat, BENGALURU.lng]}
             zoom={13}
@@ -273,7 +273,6 @@ export default function DriverDashboard() {
         {/* Panel */}
         <aside className="min-h-0 flex-1 overflow-y-auto border-t border-white/10 bg-slate-950/60 backdrop-blur-xl lg:order-1 lg:w-[400px] lg:flex-none lg:border-r lg:border-t-0 xl:w-[430px]">
           <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
-            {/* Profile / onboarding */}
             {!myProfile ? (
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
                 <div className="flex items-center gap-3">
@@ -282,10 +281,10 @@ export default function DriverDashboard() {
                   </span>
                   <div>
                     <h1 className="font-display text-base font-semibold text-white">
-                      Become a driver
+                      Driver profile
                     </h1>
                     <p className="text-[11px] text-slate-400">
-                      Zero commissions · keep 100% of every fare
+                      One profile to accept bookings across the city.
                     </p>
                   </div>
                 </div>
@@ -330,7 +329,7 @@ export default function DriverDashboard() {
                       <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                       <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
                         <Zap className="size-3 text-emerald-300" />
-                        {myProfile.vehicleNo} · EV auto
+                        {myProfile.vehicleNo} · EV rickshaw
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -356,7 +355,6 @@ export default function DriverDashboard() {
                   </div>
                 </div>
 
-                {/* completed toast card */}
                 {justCompleted && (
                   <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                     <CheckCircle2 className="size-6 shrink-0 text-emerald-300" />
@@ -369,7 +367,6 @@ export default function DriverDashboard() {
                   </div>
                 )}
 
-                {/* active ride */}
                 {ride ? (
                   <DriverRideCard
                     ride={ride}
@@ -382,7 +379,7 @@ export default function DriverDashboard() {
                   <>
                     <div className="flex items-center justify-between">
                       <h2 className="font-display text-sm font-semibold text-white">
-                        Live requests
+                        Live bookings
                       </h2>
                       <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
                         <span className="relative flex size-1.5">
@@ -396,18 +393,19 @@ export default function DriverDashboard() {
                     {!online ? (
                       <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-xs text-slate-500">
                         <MapPin className="mx-auto mb-2 size-5 text-slate-600" />
-                        Go online to see nearby ride requests stream in live.
+                        Go online to see customer bookings stream in live.
                       </div>
                     ) : (openRequests ?? []).length === 0 ? (
                       <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center text-xs text-slate-500">
                         <Navigation className="mx-auto mb-2 size-5 text-slate-600" />
-                        No requests right now. As soon as a rider books, it appears
-                        here instantly — no refresh needed.
+                        No bookings right now. As soon as a customer books, it
+                        appears here instantly — no refresh needed.
                       </div>
                     ) : (
                       <div className="space-y-2.5">
                         {(openRequests ?? []).map((r) => {
                           const selected = selectedRequest === r._id;
+                          const scheduled = r.scheduledFor && r.scheduledFor > Date.now();
                           return (
                             <button
                               key={r._id}
@@ -427,6 +425,17 @@ export default function DriverDashboard() {
                                 <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">
                                   {formatINR(r.fare)}
                                 </span>
+                              </div>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+                                  {vehicleById(r.vehicleType).name}
+                                </span>
+                                {scheduled && (
+                                  <span className="flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                                    <CalendarClock className="size-3" />
+                                    {format(new Date(r.scheduledFor!), "h:mm a")}
+                                  </span>
+                                )}
                               </div>
                               <div className="mt-2.5 space-y-1.5 text-[12px]">
                                 <p className="flex items-start gap-2 text-slate-300">
@@ -486,20 +495,30 @@ function DriverRideCard({
   onStatus: (s: "arriving" | "in_progress" | "completed") => void;
   userId: string;
 }) {
+  const vehicle = vehicleById(ride.vehicleType);
+  const scheduled = ride.scheduledFor && ride.scheduledFor > Date.now();
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
-              Active ride
+              Active booking
             </p>
             <p className="mt-0.5 text-sm font-semibold text-white">
-              {ride.riderName} · {formatINR(ride.fare)}
+              {ride.riderName} · {vehicle.name} · {formatINR(ride.fare)}
             </p>
           </div>
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-300">
-            <Star className="size-3 fill-current" /> 4.9
+          <span
+            className={cn(
+              "flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+              ride.paid
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                : "border-white/15 bg-white/5 text-slate-400",
+            )}
+          >
+            {ride.paid ? "Paid" : "Due"}
           </span>
         </div>
 
@@ -515,6 +534,14 @@ function DriverRideCard({
             <span className="truncate">{ride.dropoff.address}</span>
           </p>
         </div>
+
+        {scheduled && (
+          <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] font-semibold text-amber-300">
+            <CalendarClock className="size-3.5" />
+            Pickup scheduled for {format(new Date(ride.scheduledFor!), "h:mm a")} — you'll
+            be notified when it's time to leave.
+          </p>
+        )}
 
         <div className="mt-4 grid gap-2">
           {ride.status === "accepted" && (
@@ -532,7 +559,7 @@ function DriverRideCard({
               onClick={() => onStatus("in_progress")}
               className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
             >
-              <Play className="size-4" /> Start ride
+              <Play className="size-4" /> Start trip
             </Button>
           )}
           {ride.status === "in_progress" && (
@@ -541,15 +568,15 @@ function DriverRideCard({
               onClick={() => onStatus("completed")}
               className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
             >
-              <CheckCircle2 className="size-4" /> Complete ride
+              <CheckCircle2 className="size-4" /> Complete trip
             </Button>
           )}
-          {(ride.status === "accepted" || ride.status === "in_progress") && (
+          {(ride.status === "accepted" || ride.status === "in_progress") && !scheduled && (
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
               <Zap className="size-3 text-emerald-300" />
               {ride.status === "accepted"
-                ? "Driving to pickup… your rider sees you move live"
-                : "On the way — rider is tracking you in real time"}
+                ? "Driving to pickup — your customer sees you move live"
+                : "On the way — the customer is tracking you in real time"}
             </p>
           )}
         </div>
@@ -563,7 +590,7 @@ function DriverRideCard({
             className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-emerald-300"
           >
             <MessageSquare className="size-4 text-emerald-300" />
-            Chat with rider
+            Message the customer
           </button>
           <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-300">
             <Wallet className="size-3" /> {formatINR(ride.fare)}

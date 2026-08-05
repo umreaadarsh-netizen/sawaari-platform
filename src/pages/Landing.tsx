@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { SawaariLogo, SawaariMark } from "@/components/SawaariLogo";
 import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
@@ -10,10 +10,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { DEFAULT_FLEET } from "@/lib/fleet";
 import {
   ArrowRight,
   Battery,
+  CalendarClock,
   CarFront,
+  CheckCircle2,
   Clock,
   Flag,
   Leaf,
@@ -22,8 +25,8 @@ import {
   Navigation,
   Radar,
   Receipt,
+  Search,
   ShieldCheck,
-  Sparkles,
   Star,
   Timer,
   UserCheck,
@@ -52,6 +55,7 @@ export default function Landing() {
 
       <Nav />
       <Hero />
+      <FleetSection />
       <Stats />
       <Features />
       <HowItWorks />
@@ -67,6 +71,7 @@ export default function Landing() {
 
 function Nav() {
   const links = [
+    { label: "Fleet", href: "#fleet" },
     { label: "Features", href: "#features" },
     { label: "How it works", href: "#how" },
     { label: "Drivers", href: "#drivers" },
@@ -75,7 +80,7 @@ function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[#070b14]/70 backdrop-blur-2xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <Link to="/" aria-label="Sawaari home">
+        <Link to="/" aria-label="SAWAARI home">
           <SawaariLogo />
         </Link>
         <div className="hidden items-center gap-8 md:flex">
@@ -123,7 +128,7 @@ function Hero() {
             className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-300"
           >
             <Battery className="size-3.5" />
-            100% electric · zero emissions
+            SAWAARI · All-electric rickshaw fleet
           </motion.div>
 
           <motion.h1
@@ -132,9 +137,9 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.08 }}
             className="mt-5 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl"
           >
-            Every auto in your city,{" "}
+            The city moves on{" "}
             <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
-              now electric.
+              electric rickshaws.
             </span>
           </motion.h1>
 
@@ -144,9 +149,9 @@ function Hero() {
             transition={{ duration: 0.6, delay: 0.16 }}
             className="mt-5 max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg"
           >
-            Sawaari matches you with a nearby EV auto in seconds — transparent
-            fares, live driver tracking, and in-ride chat. The ride-hailing
-            experience that breathes clean.
+            SAWAARI connects you with a vetted fleet of electric rickshaws —
+            transparent fares, live driver tracking, scheduled pickups and
+            secure in-ride chat, all managed from one workspace.
           </motion.p>
 
           <motion.div
@@ -160,7 +165,7 @@ function Hero() {
                 size="lg"
                 className="h-12 bg-emerald-400 px-6 text-[15px] font-semibold text-emerald-950 shadow-xl shadow-emerald-500/30 hover:bg-emerald-300"
               >
-                Book a ride <ArrowRight className="size-4" />
+                Book a rickshaw <ArrowRight className="size-4" />
               </Button>
             </Link>
             <Link to="/auth?returnTo=%2Fapp%2Fdriver">
@@ -169,7 +174,7 @@ function Hero() {
                 variant="outline"
                 className="h-12 border-white/15 bg-white/5 px-6 text-[15px] font-semibold text-white backdrop-blur hover:bg-white/10"
               >
-                <CarFront className="size-4" /> Drive with Sawaari
+                <CarFront className="size-4" /> Drive with SAWAARI
               </Button>
             </Link>
           </motion.div>
@@ -181,14 +186,15 @@ function Hero() {
             className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-slate-500"
           >
             <span className="flex items-center gap-1.5">
-              <Zap className="size-4 text-emerald-400" /> 50,000+ rides
+              <CheckCircle2 className="size-4 text-emerald-400" /> 50,000+ rides
+              completed
             </span>
             <span className="flex items-center gap-1.5">
-              <Star className="size-4 fill-amber-400 text-amber-400" /> 4.9 rider
-              rating
+              <Star className="size-4 fill-amber-400 text-amber-400" /> 4.9 average
+              rider rating
             </span>
             <span className="flex items-center gap-1.5">
-              <Leaf className="size-4 text-emerald-400" /> 12 clean-air cities
+              <Leaf className="size-4 text-emerald-400" /> 12 cities served
             </span>
           </motion.div>
         </div>
@@ -236,7 +242,7 @@ function MapPreview() {
   const markers: MapMarker[] = [
     { id: "p", kind: "pickup", position: PREVIEW_PICKUP, label: "Indiranagar 100 Ft Road" },
     { id: "d", kind: "dropoff", position: PREVIEW_DROPOFF, label: "Koramangala 5th Block" },
-    { id: "drv", kind: "driver", position: driverPos, label: "Priya · EV 4821" },
+    { id: "drv", kind: "driver", position: driverPos, label: "Priya · KA 01 EV 4821" },
     { id: "idle1", kind: "driver-idle", position: [12.951, 77.649] },
     { id: "idle2", kind: "driver-idle", position: [12.988, 77.613] },
   ];
@@ -251,7 +257,7 @@ function MapPreview() {
         className="h-[380px] sm:h-[440px]"
       />
 
-      {/* floating ride card */}
+      {/* live ride card */}
       <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-[300px]">
         <div className="rounded-2xl border border-white/15 bg-slate-950/80 p-4 shadow-2xl shadow-black/50 backdrop-blur-2xl">
           <div className="flex items-center gap-3">
@@ -291,6 +297,98 @@ function MapPreview() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---- fleet catalogue ------------------------------------------------------
+
+function FleetSection() {
+  const [query, setQuery] = useState("");
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return DEFAULT_FLEET.filter((v) => v.enabled);
+    return DEFAULT_FLEET.filter(
+      (v) =>
+        v.enabled &&
+        (v.name.toLowerCase().includes(q) ||
+          v.tagline.toLowerCase().includes(q) ||
+          String(v.seats).includes(q)),
+    );
+  }, [query]);
+
+  return (
+    <section id="fleet" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
+      <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+          The fleet
+        </p>
+        <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          Choose your rickshaw
+        </h2>
+        <p className="mt-4 text-slate-400">
+          Every vehicle is battery-electric, and every fare is published
+          upfront — base rate plus a per-kilometre charge, nothing hidden.
+        </p>
+      </motion.div>
+
+      <motion.div {...fadeUp} className="mx-auto mt-10 max-w-md">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search the catalogue — comfort, luggage, seats…"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 backdrop-blur-xl focus:border-emerald-400/50 focus:outline-none"
+          />
+        </div>
+      </motion.div>
+
+      <div className="mt-10 grid gap-4 md:grid-cols-3">
+        {results.length === 0 && (
+          <p className="col-span-full py-10 text-center text-sm text-slate-500">
+            No rickshaws match your search.
+          </p>
+        )}
+        {results.map((v, i) => (
+          <motion.div
+            key={v.id}
+            {...fadeUp}
+            transition={{ duration: 0.5, delay: i * 0.08 }}
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-xl transition-all hover:-translate-y-1 hover:border-emerald-400/30 hover:bg-white/[0.05]"
+          >
+            <div className="flex items-start justify-between">
+              <span className="grid size-11 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-400/20">
+                <Zap className="size-5" />
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-400">
+                {v.seats} seats
+              </span>
+            </div>
+            <h3 className="mt-4 font-display text-lg font-semibold text-white">{v.name}</h3>
+            <p className="mt-1 text-sm text-slate-400">{v.tagline}</p>
+            <div className="mt-5 flex items-end justify-between border-t border-white/10 pt-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Fare
+                </p>
+                <p className="font-display text-xl font-semibold text-emerald-300">
+                  ₹{v.baseFare} <span className="text-sm text-slate-400">+ ₹{v.perKm}/km</span>
+                </p>
+              </div>
+              <Link to="/auth?returnTo=%2Fapp%2Frider">
+                <Button
+                  size="sm"
+                  className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                >
+                  Book <ArrowRight className="size-3.5" />
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -334,34 +432,34 @@ function Stats() {
 function Features() {
   const items = [
     {
-      icon: Zap,
-      title: "All-electric fleet",
-      body: "Every auto on Sawaari is a battery-powered EV — quiet rides, no fumes, and charging included for drivers.",
+      icon: Receipt,
+      title: "Fixed, transparent fares",
+      body: "Every booking shows a final fare before you confirm — base rate plus per-kilometre charge, with no surge pricing at any hour.",
     },
     {
-      icon: Receipt,
-      title: "Fare upfront",
-      body: "A transparent ₹30 base + ₹14/km. The price you see is the price you pay. No surge, no surprises.",
+      icon: CalendarClock,
+      title: "Book now or schedule",
+      body: "Ride immediately or schedule a pickup up to 48 hours ahead. Drivers are confirmed for scheduled pickups before you leave.",
     },
     {
       icon: Radar,
       title: "Live driver tracking",
-      body: "Watch your driver approach in real time over a live WebSocket link between both dashboards.",
+      body: "Watch your driver approach in real time over a live connection between both dashboards — no refreshing required.",
     },
     {
       icon: MessageSquare,
-      title: "In-ride chat",
-      body: "Message your driver the moment you're matched — share pin drops and updates without phone calls.",
-    },
-    {
-      icon: Timer,
-      title: "Match in seconds",
-      body: "Ride requests stream straight to nearby online drivers and get accepted in under 15 seconds.",
+      title: "Secure in-ride chat",
+      body: "Message your driver the moment you're matched. Share exact pickups and updates without exchanging phone numbers.",
     },
     {
       icon: ShieldCheck,
-      title: "Verified & safe",
-      body: "Document-verified drivers, trip sharing, SOS support and a 4.9★ community rating on every ride.",
+      title: "Verified fleet, serious safety",
+      body: "Document-verified drivers, trip sharing and an SOS channel on every ride, backed by a 4.9★ community rating.",
+    },
+    {
+      icon: Wallet,
+      title: "Pay your way",
+      body: "Settle by UPI, card or cash at the end of the trip. Every payment issues a numbered receipt for your records.",
     },
   ];
   return (
@@ -371,12 +469,11 @@ function Features() {
           Features
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Ride-hailing, reimagined for a{" "}
-          <span className="text-emerald-300">cleaner city</span>
+          Ride-hailing, built to a higher standard
         </h2>
         <p className="mt-4 text-slate-400">
-          Everything you'd expect from a modern mobility platform — minus the
-          noise, fumes and surge pricing.
+          Everything a modern mobility service should offer — minus the noise,
+          fumes and unpredictable pricing.
         </p>
       </motion.div>
 
@@ -408,22 +505,22 @@ function Features() {
 function HowItWorks() {
   const steps = [
     {
-      icon: MapPin,
+      icon: UserCheck,
       step: "01",
-      title: "Set pickup & drop-off",
-      body: "Type your locations with instant suggestions, or just tap the map. Your fare appears before you book.",
+      title: "Choose your rickshaw",
+      body: "Browse the catalogue, pick a vehicle that fits your group and luggage, and set your pickup and drop-off — or tap the map.",
     },
     {
-      icon: UserCheck,
+      icon: CalendarClock,
       step: "02",
-      title: "Match with a driver",
-      body: "Your request streams live to nearby online drivers over WebSocket — the first to accept gets the ride.",
+      title: "Book now or schedule",
+      body: "Confirm an immediate ride or schedule a pickup up to 48 hours ahead. Your request streams live to nearby drivers.",
     },
     {
       icon: Navigation,
       step: "03",
-      title: "Track & ride",
-      body: "Follow your driver on the map, chat along the way, pay a fixed fare, and rate the trip when it's done.",
+      title: "Track, ride and settle",
+      body: "Follow your driver live, chat along the way, and pay by UPI, card or cash at the end — with a numbered receipt.",
     },
   ];
   return (
@@ -433,7 +530,7 @@ function HowItWorks() {
           How it works
         </p>
         <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          From curb to curb in three steps
+          From booking to drop-off in three steps
         </h2>
       </motion.div>
 
@@ -451,9 +548,7 @@ function HowItWorks() {
             <span className="grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-emerald-950 shadow-lg shadow-emerald-500/25">
               <Icon className="size-5" />
             </span>
-            <h3 className="mt-5 font-display text-lg font-semibold text-white">
-              {title}
-            </h3>
+            <h3 className="mt-5 font-display text-lg font-semibold text-white">{title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">{body}</p>
             {i < steps.length - 1 && (
               <ArrowRight className="absolute -right-3.5 top-1/2 hidden size-5 -translate-y-1/2 text-emerald-400/60 lg:block" />
@@ -469,9 +564,21 @@ function HowItWorks() {
 
 function DriverSection() {
   const perks = [
-    { icon: Wallet, title: "Keep 100% of fares", body: "No commissions, no hidden cuts. Every rupee you earn is yours." },
-    { icon: Battery, title: "Zero fuel costs", body: "Your EV charges at Sawaari partner stations — included, not deducted." },
-    { icon: Clock, title: "Your hours, your rules", body: "Go online whenever suits you. Requests stream in live while you're on duty." },
+    {
+      icon: Wallet,
+      title: "Keep 100% of every fare",
+      body: "No commissions and no hidden cuts. Every rupee you earn is yours to keep.",
+    },
+    {
+      icon: Battery,
+      title: "Zero fuel costs",
+      body: "Your rickshaw charges at SAWAARI partner stations — included, never deducted.",
+    },
+    {
+      icon: Clock,
+      title: "Work on your own hours",
+      body: "Go online whenever it suits you. Bookings stream in live while you're on duty.",
+    },
   ];
   return (
     <section id="drivers" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
@@ -487,8 +594,9 @@ function DriverSection() {
             </span>
           </h2>
           <p className="mt-4 max-w-md text-slate-400">
-            Join India's most driver-friendly EV fleet. Free onboarding, instant
-            payouts, and a live request feed that keeps you moving.
+            Join the region's most driver-friendly electric fleet. Free
+            onboarding, instant receipts and a live booking feed that keeps you
+            moving.
           </p>
 
           <div className="mt-8 space-y-3">
@@ -534,7 +642,7 @@ function DriverSection() {
                 </p>
               </div>
               <span className="flex items-center gap-1 rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-bold text-emerald-300">
-                <Sparkles className="size-3.5" /> 62 rides
+                <Zap className="size-3.5" /> 62 rides
               </span>
             </div>
             <div className="mt-6 space-y-4">
@@ -575,20 +683,24 @@ function DriverSection() {
 function Faq() {
   const items = [
     {
-      q: "What exactly is Sawaari?",
-      a: "Sawaari is a full-stack EV auto ride-hailing platform. Riders book electric autos with transparent fares and live tracking, while drivers get a live request feed with real-time communication between both dashboards.",
+      q: "What is SAWAARI?",
+      a: "SAWAARI is a full-stack electric rickshaw booking platform. Customers browse a fleet catalogue, book immediately or schedule a pickup, track their driver live and settle the fare at the end of the trip. Operators manage bookings, drivers and the catalogue from a single admin area.",
     },
     {
       q: "How are fares calculated?",
-      a: "Fares are fully transparent: ₹30 base plus ₹14 per kilometre, with a ₹35 minimum. The estimate shown before booking is exactly what you pay — there's no surge pricing on Sawaari.",
+      a: "Every rickshaw in the catalogue shows a fixed base rate plus a per-kilometre charge, with a minimum fare. The estimate you see before booking is final — SAWAARI never applies surge pricing.",
     },
     {
-      q: "Are the autos really electric?",
-      a: "Yes. Our entire fleet is battery-electric, which means quieter rides, zero tailpipe emissions, and no fuel costs — a benefit we pass on to both riders and drivers.",
+      q: "Can I schedule a ride for later?",
+      a: "Yes. Choose 'Schedule' when booking and pick a pickup time up to 48 hours ahead. A driver is confirmed for your scheduled pickup, and you're notified when it's time to leave.",
+    },
+    {
+      q: "How do payments work?",
+      a: "Settle your fare at the end of the trip by UPI, card or cash. Every payment issues a numbered receipt, and paid trips are reflected in your recent trips list.",
     },
     {
       q: "How does live tracking work?",
-      a: "Rider and driver dashboards stay in sync over a live WebSocket connection. When a driver accepts, starts moving, or sends a chat message, it appears on the other side instantly — no refreshing required.",
+      a: "The customer and driver dashboards stay in sync over a live connection. When a driver accepts, starts moving or sends a message, it appears on the other side instantly — no refreshing required.",
     },
   ];
   return (
@@ -637,13 +749,13 @@ function FinalCta() {
           Ready when you are
         </p>
         <h2 className="relative mx-auto mt-4 max-w-2xl font-display text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-          Your city just got quieter, cleaner,{" "}
+          The city is quieter, cleaner{" "}
           <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">
             and faster.
           </span>
         </h2>
         <p className="relative mx-auto mt-4 max-w-md text-sm text-slate-400">
-          Sign in with your email — or jump in as a guest — and take your first
+          Sign in with your email — or continue as a guest — and take your first
           electric ride in under a minute.
         </p>
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -652,7 +764,7 @@ function FinalCta() {
               size="lg"
               className="h-12 bg-emerald-400 px-7 text-[15px] font-semibold text-emerald-950 shadow-xl shadow-emerald-500/30 hover:bg-emerald-300"
             >
-              Book a ride <ArrowRight className="size-4" />
+              Book a rickshaw <ArrowRight className="size-4" />
             </Button>
           </Link>
           <Link to="/auth?returnTo=%2Fapp%2Fdriver">
@@ -677,15 +789,17 @@ function Footer() {
         <div className="flex items-center gap-3">
           <SawaariMark className="size-8" />
           <div>
-            <p className="font-display text-sm font-semibold text-white">Sawaari</p>
-            <p className="text-[11px] text-slate-500">Electric autos, on demand.</p>
+            <p className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-white">
+              Sawaari
+            </p>
+            <p className="text-[11px] text-slate-500">Electric rickshaws, on demand.</p>
           </div>
         </div>
         <p className="text-xs text-slate-500">
-          © {new Date().getFullYear()} Sawaari Mobility · Built for cleaner cities
+          © {new Date().getFullYear()} SAWAARI Mobility · Built for cleaner cities
         </p>
         <div className="flex items-center gap-5 text-xs text-slate-500">
-          <a href="#features" className="transition-colors hover:text-slate-300">Features</a>
+          <a href="#fleet" className="transition-colors hover:text-slate-300">Fleet</a>
           <a href="#drivers" className="transition-colors hover:text-slate-300">Drivers</a>
           <a href="#faq" className="transition-colors hover:text-slate-300">FAQ</a>
         </div>

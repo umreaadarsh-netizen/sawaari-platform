@@ -14,6 +14,7 @@ const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const RiderDashboard = lazy(() => import("./pages/rider/RiderDashboard.tsx"));
 const DriverDashboard = lazy(() => import("./pages/driver/DriverDashboard.tsx"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -138,6 +139,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <RequireAuth>
                     <DriverDashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/app/admin"
+                element={
+                  <RequireAuth>
+                    <AdminDashboard />
                   </RequireAuth>
                 }
               />

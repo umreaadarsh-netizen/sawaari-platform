@@ -34,7 +34,7 @@ export function SawaariLogo({
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <SawaariMark className={cn("size-9", markClassName)} />
-      <span className="font-display text-lg font-semibold tracking-tight text-foreground">
+      <span className="font-display text-[15px] font-semibold uppercase tracking-[0.18em] text-foreground">
         Sawaari
       </span>
     </span>

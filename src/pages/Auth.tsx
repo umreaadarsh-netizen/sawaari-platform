@@ -132,11 +132,11 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <SawaariMark className="size-12" />
             </button>
             <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight text-white">
-              {step === "signIn" ? "Welcome to Sawaari" : "Check your email"}
+              {step === "signIn" ? "Welcome to SAWAARI" : "Check your email"}
             </h1>
             <p className="mt-1 text-sm text-slate-400">
               {step === "signIn"
-                ? "Electric autos, on demand. Sign in or create your account."
+                ? "Electric rickshaws, on demand. Sign in to book, drive or manage your fleet."
                 : `We've sent a code to ${step.email}`}
             </p>
           </div>
@@ -151,14 +151,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <div className="grid grid-cols-2 gap-2.5">
                   <RoleCard
                     icon={<MapPin className="size-4" />}
-                    title="Book a ride"
-                    sub="Rider"
+                    title="Book a rickshaw"
+                    sub="Customer"
                     selected={role === "rider"}
                     onClick={() => setRole(role === "rider" ? null : "rider")}
                   />
                   <RoleCard
                     icon={<CarFront className="size-4" />}
-                    title="Drive & earn"
+                    title="Drive with SAWAARI"
                     sub="Driver"
                     selected={role === "driver"}
                     onClick={() => setRole(role === "driver" ? null : "driver")}
@@ -217,8 +217,8 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-500">
                 No password needed — we email a one-time code.{" "}
                 {role
-                  ? `You'll land in the ${role} dashboard.`
-                  : "Pick a role above to choose your dashboard."}
+                  ? `You'll land in the ${role === "rider" ? "customer" : "driver"} area.`
+                  : "Pick a role above to choose where you land."}
               </p>
             </>
           ) : (

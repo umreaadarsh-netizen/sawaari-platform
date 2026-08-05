@@ -71,6 +71,11 @@ const schema = defineSchema(
       dropoff: placeValidator,
       fare: v.number(),
       distanceKm: v.number(),
+      vehicleType: v.string(), // fleet catalog id
+      scheduledFor: v.optional(v.number()), // future pickup time for scheduled rides
+      paid: v.boolean(),
+      paidAt: v.optional(v.number()),
+      paymentMethod: v.optional(v.string()),
       riderName: v.string(),
       driverName: v.optional(v.string()),
       vehicleNo: v.optional(v.string()),
@@ -105,6 +110,19 @@ const schema = defineSchema(
       body: v.string(),
       createdAt: v.number(),
     }).index("by_ride_created", ["rideId", "createdAt"]),
+
+    // The bookable fleet catalog — managed from the admin area.
+    fleet: defineTable({
+      id: v.string(), // stable vehicle id, e.g. "classic"
+      name: v.string(),
+      tagline: v.string(),
+      seats: v.number(),
+      baseFare: v.number(),
+      perKm: v.number(),
+      minFare: v.number(),
+      enabled: v.boolean(),
+      sort: v.number(),
+    }).index("by_vehicle_id", ["id"]),
   },
   {
     schemaValidation: false,

@@ -1,7 +1,7 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { FleetVehicle, getFleetRates } from "./fleet";
 
 // ---- shared helpers -------------------------------------------------------
 
@@ -23,11 +23,10 @@ export function haversineKm(
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/** Transparent fare: ₹30 base + ₹14/km, minimum ₹35, rounded to ₹5. */
-export function estimateFare(distanceKm: number): number {
-  const raw = 30 + 14 * distanceKm;
-  const min = 35;
-  return Math.max(min, Math.round(Math.max(raw, min) / 5) * 5);
+/** Transparent fare from a fleet card: base + per-km, minimum, rounded to ₹5. */
+export function estimateFare(distanceKm: number, rates: FleetVehicle): number {
+  const raw = rates.baseFare + rates.perKm * distanceKm;
+  return Math.max(rates.minFare, Math.round(Math.max(raw, rates.minFare) / 5) * 5);
 }
 
 const ACTIVE_STATUSES = [
@@ -46,8 +45,10 @@ export const requestRide = mutation({
   args: {
     pickup: v.object({ address: v.string(), lat: v.number(), lng: v.number() }),
     dropoff: v.object({ address: v.string(), lat: v.number(), lng: v.number() }),
+    vehicleType: v.string(),
+    scheduledFor: v.optional(v.number()),
   },
-  handler: async (ctx, { pickup, dropoff }) => {
+  handler: async (ctx, { pickup, dropoff, vehicleType, scheduledFor }) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Please sign in to book a ride.");
 
@@ -59,6 +60,17 @@ export const requestRide = mutation({
     );
     if (distanceKm < 0.2) {
       throw new Error("Pickup and drop-off are too close together.");
+    }
+
+    const rates = await getFleetRates(ctx, vehicleType);
+    if (!rates.enabled) {
+      throw new Error("This vehicle is temporarily unavailable.");
+    }
+    if (scheduledFor !== undefined) {
+      const maxAhead = Date.now() + 48 * 60 * 60 * 1000;
+      if (scheduledFor < Date.now() || scheduledFor > maxAhead) {
+        throw new Error("Scheduled pickup must be within the next 48 hours.");
+      }
     }
 
     const recent = await ctx.db
@@ -75,8 +87,11 @@ export const requestRide = mutation({
       status: "requested",
       pickup,
       dropoff,
-      fare: estimateFare(distanceKm),
+      fare: estimateFare(distanceKm, rates),
       distanceKm,
+      vehicleType,
+      scheduledFor,
+      paid: false,
       riderName: user.name ?? user.email?.split("@")[0] ?? "Guest",
       createdAt: Date.now(),
     });
@@ -105,6 +120,60 @@ export const activeRide = query({
       .order("desc")
       .take(10);
     return rides.find((r) => isActive(r.status)) ?? null;
+  },
+});
+
+/** Settle an invoice for a completed trip. */
+export const payRide = mutation({
+  args: {
+    rideId: v.id("rides"),
+    method: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
+  },
+  handler: async (ctx, { rideId, method }) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) throw new Error("Please sign in.");
+    const ride = await ctx.db.get(rideId);
+    if (!ride) throw new Error("Ride not found.");
+    if (ride.riderId !== user._id) {
+      throw new Error("Only the rider can pay for this ride.");
+    }
+    if (ride.status !== "completed") {
+      throw new Error("Payment is available once the trip is completed.");
+    }
+    if (ride.paid) throw new Error("This trip is already settled.");
+    await ctx.db.patch(rideId, {
+      paid: true,
+      paidAt: Date.now(),
+      paymentMethod: method,
+    });
+  },
+});
+
+/** Recent trips for the signed-in customer or driver. */
+export const myRides = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return [];
+    const [asRider, asDriver] = await Promise.all([
+      ctx.db
+        .query("rides")
+        .withIndex("by_rider_created", (q) => q.eq("riderId", user._id))
+        .order("desc")
+        .take(20),
+      ctx.db
+        .query("rides")
+        .withIndex("by_driver_created", (q) => q.eq("driverId", user._id))
+        .order("desc")
+        .take(20),
+    ]);
+    const seen = new Set<string>();
+    const merged = [...asRider, ...asDriver].filter((r) => {
+      if (seen.has(r._id)) return false;
+      seen.add(r._id);
+      return true;
+    });
+    return merged.sort((a, b) => b.createdAt - a.createdAt).slice(0, 20);
   },
 });
 
