@@ -59,11 +59,17 @@ export const adminStats = query({
     const drivers = await ctx.db.query("drivers").take(500);
     const users = await ctx.db.query("users").take(500);
     const completed = rides.filter((r) => r.status === "completed");
+    const paid = completed.filter((r) => r.paid);
+    const byMethod = (m: string) =>
+      paid.filter((r) => r.paymentMethod === m).reduce((sum, r) => sum + r.fare, 0);
     return {
       totalRides: rides.length,
       activeRides: rides.filter((r) => (ACTIVE as readonly string[]).includes(r.status)).length,
       completedRides: completed.length,
       revenue: completed.reduce((sum, r) => sum + r.fare, 0),
+      paidRides: paid.length,
+      upiRevenue: byMethod("upi"),
+      cashRevenue: byMethod("cash"),
       onlineDrivers: drivers.filter((d) => d.online).length,
       totalDrivers: drivers.length,
       totalUsers: users.length,
@@ -94,5 +100,14 @@ export const listAllUsers = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     return await ctx.db.query("users").order("desc").take(100);
+  },
+});
+
+/** The settlement ledger: every receipt issued, newest first. */
+export const adminListReceipts = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("receipts").order("desc").take(100);
   },
 });

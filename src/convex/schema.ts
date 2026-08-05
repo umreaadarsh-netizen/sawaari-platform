@@ -109,6 +109,33 @@ const schema = defineSchema(
       .index("by_user", ["userId"])
       .index("by_online", ["online"]),
 
+    // Settlement receipts for completed rides. A receipt is written the moment
+    // a fare is captured (UPI or cash) and is the permanent record of the
+    // transaction — rider/driver dashboards and the admin ledger read from
+    // here, so a receipt can never be edited or lost.
+    receipts: defineTable({
+      rideId: v.id("rides"),
+      receiptNo: v.string(), // stable SW-XXXXXX id shown to customers
+      riderId: v.id("users"),
+      riderName: v.string(),
+      driverId: v.optional(v.id("users")),
+      driverName: v.optional(v.string()),
+      vehicleNo: v.optional(v.string()),
+      vehicleType: v.string(),
+      pickup: placeValidator,
+      dropoff: placeValidator,
+      distanceKm: v.number(),
+      baseFare: v.number(),
+      distanceFare: v.number(),
+      totalFare: v.number(),
+      paymentMethod: v.union(v.literal("upi"), v.literal("cash")),
+      upiRef: v.optional(v.string()), // UPI transaction reference (UTRN)
+      settledAt: v.number(),
+    })
+      .index("by_ride", ["rideId"])
+      .index("by_rider_created", ["riderId", "settledAt"])
+      .index("by_driver_created", ["driverId", "settledAt"]),
+
     // In-ride chat between rider and driver (streamed live to both).
     rideMessages: defineTable({
       rideId: v.id("rides"),

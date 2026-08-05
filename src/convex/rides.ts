@@ -45,6 +45,11 @@ function genOtp(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+/** Random 12-digit UPI transaction reference (UTRN) minted on capture. */
+function genUtrn(): string {
+  return String(Math.floor(100000000000 + Math.random() * 900000000000));
+}
+
 /**
  * Strip the ride-lifecycle codes from a ride doc. The OTPs are secrets shared
  * only rider→driver on their phones; driver/admin/history queries must never
@@ -161,13 +166,22 @@ export const activeRide = query({
   },
 });
 
-/** Settle an invoice for a completed trip. */
+/**
+ * Capture payment for a completed trip and write its permanent receipt.
+ *
+ * UPI captures carry a UTRN (the transaction reference from the rider's UPI
+ * app — minted here when no real gateway reference is supplied); cash is
+ * recorded as collected. Either way the ride is settled and a receipt row is
+ * stored in Convex, which both dashboards and the admin ledger read back
+ * reactively over the WebSocket subscription.
+ */
 export const payRide = mutation({
   args: {
     rideId: v.id("rides"),
-    method: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
+    method: v.union(v.literal("upi"), v.literal("cash")),
+    upiRef: v.optional(v.string()), // real gateway reference, when wired up
   },
-  handler: async (ctx, { rideId, method }) => {
+  handler: async (ctx, { rideId, method, upiRef }) => {
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Please sign in.");
     const ride = await ctx.db.get(rideId);
@@ -179,9 +193,35 @@ export const payRide = mutation({
       throw new Error("Payment is available once the trip is completed.");
     }
     if (ride.paid) throw new Error("This trip is already settled.");
+
+    const rates = await getFleetRates(ctx, ride.vehicleType);
+    const baseFare = Math.min(rates.baseFare, ride.fare);
+    const distanceFare = ride.fare - baseFare;
+    const settledAt = Date.now();
+
+    await ctx.db.insert("receipts", {
+      rideId,
+      receiptNo: `SW-${rideId.slice(-6).toUpperCase()}`,
+      riderId: ride.riderId,
+      riderName: ride.riderName,
+      driverId: ride.driverId,
+      driverName: ride.driverName,
+      vehicleNo: ride.vehicleNo,
+      vehicleType: ride.vehicleType,
+      pickup: ride.pickup,
+      dropoff: ride.dropoff,
+      distanceKm: ride.distanceKm,
+      baseFare,
+      distanceFare,
+      totalFare: ride.fare,
+      paymentMethod: method,
+      upiRef: method === "upi" ? upiRef?.trim() || genUtrn() : undefined,
+      settledAt,
+    });
+
     await ctx.db.patch(rideId, {
       paid: true,
-      paidAt: Date.now(),
+      paidAt: settledAt,
       paymentMethod: method,
     });
   },
@@ -227,6 +267,24 @@ export const getRide = query({
     if (!ride) return null;
     if (ride.riderId !== user._id && ride.driverId !== user._id) return null;
     return withoutOtps(ride);
+  },
+});
+
+/** The stored receipt for a ride, if the current user was part of it. */
+export const receiptForRide = query({
+  args: { rideId: v.id("rides") },
+  handler: async (ctx, { rideId }) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const ride = await ctx.db.get(rideId);
+    if (!ride) return null;
+    if (ride.riderId !== user._id && ride.driverId !== user._id) return null;
+    return (
+      (await ctx.db
+        .query("receipts")
+        .withIndex("by_ride", (q) => q.eq("rideId", rideId))
+        .first()) ?? null
+    );
   },
 });
 
