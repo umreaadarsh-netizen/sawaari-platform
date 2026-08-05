@@ -58,18 +58,39 @@ export const adminStats = query({
     const rides = await ctx.db.query("rides").order("desc").take(500);
     const drivers = await ctx.db.query("drivers").take(500);
     const users = await ctx.db.query("users").take(500);
+    const receipts = await ctx.db.query("receipts").order("desc").take(500);
     const completed = rides.filter((r) => r.status === "completed");
     const paid = completed.filter((r) => r.paid);
     const byMethod = (m: string) =>
       paid.filter((r) => r.paymentMethod === m).reduce((sum, r) => sum + r.fare, 0);
+
+    // The platform's transaction ledger — every settled receipt carries the
+    // frozen 75/25 split, so the admin sees exactly what was collected, what
+    // accrued to drivers and what the platform retained. Receipts written
+    // before the split shipped fall back to the 75/25 arithmetic.
+    const faresCollected = receipts.reduce((sum, r) => sum + r.totalFare, 0);
+    const driverPayouts = receipts.reduce(
+      (sum, r) => sum + (r.driverShare ?? Math.round(r.totalFare * 0.75)),
+      0,
+    );
+    const platformRevenue = receipts.reduce(
+      (sum, r) =>
+        sum + (r.platformShare ?? r.totalFare - Math.round(r.totalFare * 0.75)),
+      0,
+    );
+
     return {
       totalRides: rides.length,
       activeRides: rides.filter((r) => (ACTIVE as readonly string[]).includes(r.status)).length,
       completedRides: completed.length,
-      revenue: completed.reduce((sum, r) => sum + r.fare, 0),
+      revenue: faresCollected,
       paidRides: paid.length,
       upiRevenue: byMethod("upi"),
       cashRevenue: byMethod("cash"),
+      qrRevenue: byMethod("qr"),
+      faresCollected,
+      driverPayouts,
+      platformRevenue,
       onlineDrivers: drivers.filter((d) => d.online).length,
       totalDrivers: drivers.length,
       totalUsers: users.length,

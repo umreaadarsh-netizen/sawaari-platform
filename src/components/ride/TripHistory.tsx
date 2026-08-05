@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { formatINR, formatKm } from "@/lib/geo";
+import { formatINR, formatKm, splitFare } from "@/lib/geo";
 import { vehicleById } from "@/lib/fleet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -11,6 +11,7 @@ import {
   History,
   MapPin,
   Receipt,
+  Wallet,
   XCircle,
 } from "lucide-react";
 
@@ -104,6 +105,12 @@ export function TripHistory({
             const vehicle = vehicleById(t.vehicleType);
             const done = t.status === "completed";
             const cancelled = t.status === "cancelled";
+            // 75/25 commission split — frozen on the ride at completion by the
+            // server; fall back to the shared arithmetic for older rides.
+            const driverSplit =
+              done && t.driverShare !== undefined && t.platformShare !== undefined
+                ? { driverShare: t.driverShare, platformShare: t.platformShare }
+                : splitFare(t.fare);
             return (
               <div
                 key={t._id}
@@ -150,6 +157,18 @@ export function TripHistory({
                     <span className="truncate">{t.dropoff.address}</span>
                   </p>
                 </div>
+
+                {done && perspective === "driver" && (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-2.5 py-1.5 text-[11px] ring-1 ring-white/5">
+                    <span className="flex items-center gap-1 font-semibold text-emerald-300">
+                      <Wallet className="size-3" />
+                      You earn {formatINR(driverSplit.driverShare)} · 75%
+                    </span>
+                    <span className="text-slate-500">
+                      Platform fee {formatINR(driverSplit.platformShare)} · 25%
+                    </span>
+                  </div>
+                )}
 
                 <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2.5">
                   <div className="flex items-center gap-2">

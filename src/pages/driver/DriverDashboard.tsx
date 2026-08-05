@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
-import { GOTEGAON, buildRoutePath, formatINR, formatKm, haversineKm } from "@/lib/geo";
+import { GOTEGAON, buildRoutePath, formatINR, formatKm, haversineKm, splitFare } from "@/lib/geo";
 import { useRoadRoute } from "@/hooks/use-road-route";
 import { useNow } from "@/hooks/use-now";
 import { vehicleById } from "@/lib/fleet";
@@ -48,6 +48,7 @@ export default function DriverDashboard() {
   const activeRide = useQuery(api.rides.activeRide, { side: "driver" });
   const openRequests = useQuery(api.rides.openRides);
   const myTrips = useQuery(api.rides.myRides);
+  const wallet = useQuery(api.wallet.myWallet);
   const saveProfile = useMutation(api.drivers.saveProfile);
   const setOnline = useMutation(api.drivers.setOnline);
   const updateLocation = useMutation(api.drivers.updateLocation);
@@ -69,6 +70,8 @@ export default function DriverDashboard() {
   const [justCompleted, setJustCompleted] = useState<{
     fare: number;
     distanceKm: number;
+    driverShare: number;
+    platformShare: number;
   } | null>(null);
 
   const ride = activeRide ?? null;
@@ -223,7 +226,13 @@ export default function DriverDashboard() {
     try {
       await updateRideStatus({ rideId: ride._id, status, otp });
       if (status === "completed") {
-        setJustCompleted({ fare: ride.fare, distanceKm: ride.distanceKm });
+        const split = splitFare(ride.fare);
+        setJustCompleted({
+          fare: ride.fare,
+          distanceKm: ride.distanceKm,
+          driverShare: split.driverShare,
+          platformShare: split.platformShare,
+        });
         window.setTimeout(() => setJustCompleted(null), 7000);
       }
     } catch (e) {
@@ -473,13 +482,46 @@ export default function DriverDashboard() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      <Wallet className="size-3.5 text-emerald-300" />
+                      Earnings wallet
+                    </p>
+                    <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      75 / 25 split
+                    </span>
+                  </div>
+                  <p className="mt-2 font-display text-2xl font-semibold text-white">
+                    {formatINR(wallet?.driverEarnings ?? 0)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    Your 75% net earnings across {wallet?.settledRides ?? 0}{" "}
+                    settled trip{(wallet?.settledRides ?? 0) === 1 ? "" : "s"}
+                  </p>
+                  <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="w-[75%] rounded-full bg-emerald-400" />
+                    <div className="flex-1 rounded-full bg-white/15" />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold text-emerald-300">
+                      You get 75% · {formatINR(wallet?.driverEarnings ?? 0)}
+                    </span>
+                    <span className="text-slate-500">
+                      Platform fee 25% · {formatINR(wallet?.platformRetained ?? 0)}
+                    </span>
+                  </div>
+                </div>
+
                 {justCompleted && (
                   <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
                     <CheckCircle2 className="size-6 shrink-0 text-emerald-300" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white">Trip completed</p>
                       <p className="text-[11px] text-emerald-300/90">
-                        {formatINR(justCompleted.fare)} earned · {formatKm(justCompleted.distanceKm)}
+                        You earned {formatINR(justCompleted.driverShare)} (75%) ·{" "}
+                        {formatKm(justCompleted.distanceKm)} · platform fee{" "}
+                        {formatINR(justCompleted.platformShare)} (25%)
                       </p>
                     </div>
                   </div>
@@ -672,6 +714,12 @@ function DriverRideCard({
   const scheduled = ride.scheduledFor && ride.scheduledFor > now;
   // The 4-digit code the customer shows — entered to start / complete the trip.
   const [otp, setOtp] = useState("");
+  // 75/25 commission breakdown — the server freezes it on the ride at
+  // completion; fall back to the shared arithmetic for older rides.
+  const split =
+    ride.driverShare !== undefined && ride.platformShare !== undefined
+      ? { driverShare: ride.driverShare, platformShare: ride.platformShare }
+      : splitFare(ride.fare);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -698,6 +746,27 @@ function DriverRideCard({
         </div>
 
         <StatusTimeline status={ride.status} />
+
+        {ride.status === "completed" && (
+          <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-slate-400">Your net earnings · 75%</span>
+              <span className="font-semibold text-emerald-300">
+                {formatINR(split.driverShare)}
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-slate-500">SAWAARI platform fee · 25%</span>
+              <span className="font-semibold text-slate-300">
+                {formatINR(split.platformShare)}
+              </span>
+            </div>
+            <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="w-[75%] rounded-full bg-emerald-400/80" />
+              <div className="flex-1 rounded-full bg-white/15" />
+            </div>
+          </div>
+        )}
 
         <div className="mt-3 space-y-1.5 text-[12px]">
           <p className="flex items-start gap-2 text-slate-300">

@@ -38,6 +38,23 @@ export function formatINR(n: number): string {
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
 }
 
+/**
+ * Sawaari's commission split: 75% of every settled fare goes to the driver's
+ * earnings and 25% is retained by the platform. Mirrors the backend split in
+ * `src/convex/wallet.ts` for display — the authoritative numbers are frozen
+ * on each ride and receipt by the server.
+ */
+export const DRIVER_COMMISSION_RATE = 0.75;
+export const PLATFORM_COMMISSION_RATE = 0.25;
+
+/** Split a fare into the driver's 75% and the platform's 25% (whole ₹). */
+export function splitFare(
+  fare: number,
+): { driverShare: number; platformShare: number } {
+  const driverShare = Math.round(fare * DRIVER_COMMISSION_RATE);
+  return { driverShare, platformShare: fare - driverShare };
+}
+
 export function formatKm(km: number): string {
   return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
 }

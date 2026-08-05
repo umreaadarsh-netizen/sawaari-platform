@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
 import { FleetVehicle, getFleetRates } from "./fleet";
+import { DRIVER_SHARE_RATE, creditWallet, splitFare } from "./wallet";
 import type { Doc } from "./_generated/dataModel";
 
 // ---- shared helpers -------------------------------------------------------
@@ -178,7 +179,12 @@ export const activeRide = query({
 export const payRide = mutation({
   args: {
     rideId: v.id("rides"),
-    method: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
+    method: v.union(
+      v.literal("upi"),
+      v.literal("card"),
+      v.literal("qr"), // SAWAARI system QR — full fare credited to the platform
+      v.literal("cash"),
+    ),
     upiRef: v.optional(v.string()), // real gateway reference, when wired up
   },
   handler: async (ctx, { rideId, method, upiRef }) => {
@@ -199,6 +205,14 @@ export const payRide = mutation({
     const distanceFare = ride.fare - baseFare;
     const settledAt = Date.now();
 
+    // Reuse the split frozen on the ride at completion (or compute it for
+    // rides completed before the split shipped). The receipt carries the same
+    // 75/25 numbers so the ledger can never drift from the ride record.
+    const split =
+      ride.driverShare !== undefined && ride.platformShare !== undefined
+        ? { driverShare: ride.driverShare, platformShare: ride.platformShare }
+        : splitFare(ride.fare);
+
     await ctx.db.insert("receipts", {
       rideId,
       receiptNo: `SW-${rideId.slice(-6).toUpperCase()}`,
@@ -214,10 +228,30 @@ export const payRide = mutation({
       baseFare,
       distanceFare,
       totalFare: ride.fare,
+      driverShare: split.driverShare,
+      platformShare: split.platformShare,
+      commissionRate: DRIVER_SHARE_RATE,
       paymentMethod: method,
-      upiRef: method === "upi" ? upiRef?.trim() || genUtrn() : undefined,
+      upiRef:
+        method === "upi" || method === "qr"
+          ? upiRef?.trim() || genUtrn()
+          : undefined,
       settledAt,
     });
+
+    // System-QR / UPI / card fares land in the platform's transaction ledger
+    // (the receipt above, full fare). From that pot, the driver's 75% share
+    // is credited to their earnings wallet now that the fare is actually in.
+    if (ride.driverId) {
+      await creditWallet(
+        ctx,
+        ride.driverId,
+        ride.fare,
+        split.driverShare,
+        split.platformShare,
+        settledAt,
+      );
+    }
 
     await ctx.db.patch(rideId, {
       paid: true,
@@ -446,10 +480,18 @@ export const updateRideStatus = mutation({
     if (!otp || otp !== ride.completionOtp) {
       throw new Error("Incorrect completion code. Ask the customer to share the code on their phone.");
     }
+    // The 75/25 commission split is calculated right here, the moment the
+    // trip completes: 75% of the fare is the driver's net earnings and 25%
+    // is retained by the platform. Freezing it on the ride lets both the
+    // driver dashboard and the receipt show the same numbers.
+    const split = splitFare(ride.fare);
     await ctx.db.patch(rideId, {
       status,
       completedAt: ride.completedAt ?? Date.now(),
       completionOtp: undefined,
+      driverShare: split.driverShare,
+      platformShare: split.platformShare,
+      commissionRate: DRIVER_SHARE_RATE,
     });
   },
 });

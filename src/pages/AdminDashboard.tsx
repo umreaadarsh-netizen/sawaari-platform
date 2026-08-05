@@ -25,11 +25,13 @@ import {
   BadgeCheck,
   CarFront,
   CircleDollarSign,
+  Landmark,
   LayoutGrid,
   Loader2,
   ShieldCheck,
   Ticket,
   Users,
+  Wallet,
   Wrench,
   XCircle,
   Zap,
@@ -146,6 +148,8 @@ function AdminWorkspace() {
       stats
         ? [
             { label: "Revenue", value: formatINR(stats.revenue), icon: CircleDollarSign, accent: true },
+            { label: "Platform fees", value: formatINR(stats.platformRevenue), icon: Landmark, accent: true },
+            { label: "Driver payouts", value: formatINR(stats.driverPayouts), icon: Wallet },
             { label: "Active bookings", value: String(stats.activeRides), icon: Ticket },
             { label: "Completed", value: String(stats.completedRides), icon: BadgeCheck },
             { label: "Drivers online", value: `${stats.onlineDrivers}/${stats.totalDrivers}`, icon: CarFront },
@@ -195,6 +199,45 @@ function AdminWorkspace() {
             </div>
           ))}
         </div>
+
+        {/* commission ledger — the 75/25 split, straight from the receipts */}
+        {stats && (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Commission ledger · 75 / 25
+              </p>
+              <span className="text-[11px] text-slate-400">
+                {formatINR(stats.faresCollected)} collected across {stats.paidRides}{" "}
+                settled ride{stats.paidRides === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-white/10">
+              <div className="w-[75%] rounded-full bg-emerald-400/90" />
+              <div className="flex-1 rounded-full bg-emerald-400/25" />
+            </div>
+            <div className="mt-2.5 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-3">
+              <div className="rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+                <p className="text-slate-500">Fares collected</p>
+                <p className="mt-0.5 font-display text-base font-semibold text-white">
+                  {formatINR(stats.faresCollected)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-emerald-400/5 px-3 py-2 ring-1 ring-emerald-400/15">
+                <p className="text-slate-400">Driver payouts · 75%</p>
+                <p className="mt-0.5 font-display text-base font-semibold text-emerald-300">
+                  {formatINR(stats.driverPayouts)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+                <p className="text-slate-400">Platform retained · 25%</p>
+                <p className="mt-0.5 font-display text-base font-semibold text-white">
+                  {formatINR(stats.platformRevenue)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Tabs defaultValue="bookings" className="mt-8">
           <TabsList className="border border-white/10 bg-white/5 text-slate-400">

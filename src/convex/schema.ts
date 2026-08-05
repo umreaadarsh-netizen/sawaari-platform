@@ -89,10 +89,30 @@ const schema = defineSchema(
       acceptedAt: v.optional(v.number()),
       startedAt: v.optional(v.number()),
       completedAt: v.optional(v.number()),
+      // The 75/25 commission split, frozen on the ride the moment it is
+      // completed (driver 75% / platform 25%). The same split is stamped on
+      // the receipt at settlement, so dashboards can always show net
+      // earnings per trip.
+      driverShare: v.optional(v.number()),
+      platformShare: v.optional(v.number()),
+      commissionRate: v.optional(v.number()),
     })
       .index("by_rider_created", ["riderId", "createdAt"])
       .index("by_driver_created", ["driverId", "createdAt"])
       .index("by_status_created", ["status", "createdAt"]),
+
+    // Driver earnings wallets — the 75% net share of every settled fare,
+    // credited automatically when the rider pays. The 25% platform cut is
+    // retained on the same row so the admin ledger balances to the gross
+    // fares the platform collected (incl. system-QR payments).
+    wallets: defineTable({
+      userId: v.id("users"),
+      driverEarnings: v.number(), // 75% net accrual for the driver
+      platformRetained: v.number(), // 25% retained by the platform
+      totalFares: v.number(), // gross fares collected through the platform
+      settledRides: v.number(),
+      updatedAt: v.number(),
+    }).index("by_user", ["userId"]),
 
     // Online EV auto drivers whose live location is streamed to riders.
     drivers: defineTable({
@@ -128,8 +148,19 @@ const schema = defineSchema(
       baseFare: v.number(),
       distanceFare: v.number(),
       totalFare: v.number(),
-      paymentMethod: v.union(v.literal("upi"), v.literal("card"), v.literal("cash")),
-      upiRef: v.optional(v.string()), // UPI transaction reference (UTRN)
+      // The frozen 75/25 commission split applied at settlement:
+      // `driverShare` (75%) accrues to the driver's earnings wallet and
+      // `platformShare` (25%) is retained by the platform's ledger.
+      driverShare: v.number(),
+      platformShare: v.number(),
+      commissionRate: v.number(),
+      paymentMethod: v.union(
+        v.literal("upi"),
+        v.literal("card"),
+        v.literal("qr"), // SAWAARI system QR — full fare credited to the platform
+        v.literal("cash"),
+      ),
+      upiRef: v.optional(v.string()), // UPI / system-QR transaction reference (UTRN)
       settledAt: v.number(),
     })
       .index("by_ride", ["rideId"])

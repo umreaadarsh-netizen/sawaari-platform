@@ -45,6 +45,7 @@ import {
   MessageCircle,
   MessageSquare,
   Navigation,
+  QrCode,
   Radar,
   Search,
   Sparkles,
@@ -739,7 +740,8 @@ function BookingView(props: {
           )}
         </Button>
         <p className="mt-2.5 text-center text-[11px] text-slate-500">
-          The quoted fare is final. Settle by UPI, card or cash at the end of the trip.
+          The quoted fare is final. Settle by UPI, system QR, card or cash at
+          the end of the trip.
         </p>
       </div>
 
@@ -1078,9 +1080,77 @@ function RideView({
 
 const PAY_METHODS = [
   { id: "upi" as const, label: "UPI" },
+  { id: "qr" as const, label: "System QR" },
   { id: "card" as const, label: "Card" },
   { id: "cash" as const, label: "Cash" },
 ];
+
+/**
+ * Deterministic pseudo-QR module grid (built once at module scope so render
+ * stays pure). Finder squares live in the three corners; the rest is a stable
+ * seeded pattern — a visual stand-in for SAWAARI's system QR until a real
+ * gateway is wired up.
+ */
+const QR_MODULES: boolean[] = (() => {
+  const n = 25;
+  let seed = 20260707;
+  const next = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return ((seed >>> 8) % 100) < 52;
+  };
+  const corner = (r0: number, c0: number) => (r: number, c: number) =>
+    r >= r0 && r < r0 + 7 && c >= c0 && c < c0 + 7;
+  const inFinder = (r: number, c: number) =>
+    corner(0, 0)(r, c) || corner(0, n - 7)(r, c) || corner(n - 7, 0)(r, c);
+  const inFinderDark = (r: number, c: number) => {
+    const ring = (r0: number, c0: number) => {
+      const rr = r - r0;
+      const cc = c - c0;
+      return (
+        rr === 0 ||
+        rr === 6 ||
+        cc === 0 ||
+        cc === 6 ||
+        (rr >= 2 && rr <= 4 && cc >= 2 && cc <= 4)
+      );
+    };
+    return ring(0, 0) || ring(0, n - 7) || ring(n - 7, 0);
+  };
+  const cells: boolean[] = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      cells.push(inFinder(r, c) ? inFinderDark(r, c) : next());
+    }
+  }
+  return cells;
+})();
+
+function SystemQr({ size = 148 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 25 25"
+      shapeRendering="crispEdges"
+      className="rounded-xl border border-emerald-400/30 bg-white p-1 shadow-lg shadow-emerald-500/10"
+      role="img"
+      aria-label="SAWAARI system QR code"
+    >
+      {QR_MODULES.map((on, i) =>
+        on ? (
+          <rect
+            key={i}
+            x={i % 25}
+            y={Math.floor(i / 25)}
+            width="1"
+            height="1"
+            fill="#0b0f1a"
+          />
+        ) : null,
+      )}
+    </svg>
+  );
+}
 
 function CheckoutCard({
   ride,
@@ -1090,7 +1160,7 @@ function CheckoutCard({
   vehicle: FleetVehicle | null;
 }) {
   const payRide = useMutation(api.rides.payRide);
-  const [method, setMethod] = useState<"upi" | "card" | "cash">("upi");
+  const [method, setMethod] = useState<"upi" | "card" | "qr" | "cash">("upi");
   const [paying, setPaying] = useState(false);
 
   const rates = vehicle ?? vehicleById("classic");
@@ -1180,7 +1250,7 @@ function CheckoutCard({
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
           Payment method
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {PAY_METHODS.map((m) => (
             <button
               key={m.id}
@@ -1199,6 +1269,28 @@ function CheckoutCard({
         </div>
       </div>
 
+      {method === "qr" && (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-4">
+          <SystemQr />
+          <div className="text-center">
+            <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-white">
+              <QrCode className="size-3.5 text-emerald-300" />
+              Scan with any UPI app
+            </p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
+              Pay{" "}
+              <span className="font-semibold text-emerald-300">
+                {formatINR(ride.fare)}
+              </span>{" "}
+              to SAWAARI's system QR — UPI ID{" "}
+              <span className="font-mono text-slate-300">sawaari@upi</span>.
+              The full fare is credited to the platform and your driver's 75%
+              share is settled automatically.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Button
         type="button"
         onClick={() => void handlePay()}
@@ -1216,7 +1308,8 @@ function CheckoutCard({
         )}
       </Button>
       <p className="text-center text-[11px] text-slate-500">
-        A receipt is issued instantly. Cash is settled directly with your driver.
+        A receipt is issued instantly. QR, UPI and card fares are captured by
+        the SAWAARI platform; cash is settled directly with your driver.
       </p>
     </div>
   );
