@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser } from "./users";
+import { clampStars, nextAverageRating } from "../lib/rating";
 
 /**
  * Rider → driver trip ratings & feedback.
@@ -21,7 +22,7 @@ export const rateDriver = mutation({
     const user = await getCurrentUser(ctx);
     if (!user) throw new Error("Please sign in.");
 
-    const stars = Math.max(1, Math.min(5, Math.round(rating)));
+    const stars = clampStars(rating);
     const cleanComment = (comment ?? "").trim().slice(0, 300);
 
     const ride = await ctx.db.get(rideId);
@@ -64,8 +65,7 @@ export const rateDriver = mutation({
     if (driver) {
       const count = driver.ratingCount ?? 0;
       const nextCount = count + 1;
-      const nextAvg =
-        count === 0 ? stars : (driver.rating * count + stars) / nextCount;
+      const nextAvg = nextAverageRating(driver.rating, count, stars);
       await ctx.db.patch(driver._id, {
         rating: Math.round(nextAvg * 10) / 10,
         ratingCount: nextCount,

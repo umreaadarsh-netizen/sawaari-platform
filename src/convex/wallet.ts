@@ -1,5 +1,4 @@
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { getCurrentUser } from "./users";
 import type { Id } from "./_generated/dataModel";
@@ -9,21 +8,15 @@ import type { Id } from "./_generated/dataModel";
  * the trip is completed — 75% accrues to the driver's earnings wallet and 25%
  * is retained by the platform (admin ledger). The split is frozen on the ride
  * and stamped again on the receipt so the numbers can never drift.
+ *
+ * The split itself lives in `src/lib/geo.ts` and is re-exported here so the
+ * server, the receipt, and the display layer are literally the same code.
  */
-export const DRIVER_SHARE_RATE = 0.75;
-export const PLATFORM_SHARE_RATE = 0.25;
-
-/**
- * Split a fare into the driver's 75% and the platform's 25% in whole rupees.
- * The driver share is rounded and the platform takes the remainder, so the
- * two parts always sum exactly to the fare.
- */
-export function splitFare(
-  fare: number,
-): { driverShare: number; platformShare: number } {
-  const driverShare = Math.round(fare * DRIVER_SHARE_RATE);
-  return { driverShare, platformShare: fare - driverShare };
-}
+export {
+  DRIVER_COMMISSION_RATE as DRIVER_SHARE_RATE,
+  PLATFORM_COMMISSION_RATE as PLATFORM_SHARE_RATE,
+  splitFare,
+} from "../lib/geo";
 
 /**
  * Credit one settled fare to a driver's earnings wallet: the 75% driver share
