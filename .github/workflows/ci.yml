@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Test · Typecheck · Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        # Fails loudly if package.json and bun.lock drift apart.
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        # src/convex/_generated is committed (see .gitignore) so this needs no
+        # Convex deployment credentials in CI.
+        run: bunx tsc -b --noEmit
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Lint
+        run: bun run lint
