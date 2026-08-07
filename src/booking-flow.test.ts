@@ -274,3 +274,90 @@ test("a completed trip is rated exactly once, with stars clamped to 1–5", asyn
   expect(rated?.rating).toBe(5);
   expect(rated?.ratingCount).toBe(1);
 });
+
+test("rider can cancel a requested ride and book a fresh ride right away", async () => {
+  const { rider, driver } = await setup();
+  await onboardDriver(driver);
+
+  // Book the first ride; it sits in the `requested` pool for nearby drivers.
+  const firstId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  expect((await rider.query(api.rides.getRide, { rideId: firstId }))?.status).toBe(
+    "requested",
+  );
+
+  // Only one ride may be in flight per rider.
+  await expect(
+    rider.mutation(api.rides.requestRide, {
+      pickup: PICKUP,
+      dropoff: DROPOFF,
+      vehicleType: "classic",
+    }),
+  ).rejects.toThrow("You already have an active ride.");
+
+  // Cancel before any driver accepts.
+  await rider.mutation(api.rides.cancelRide, { rideId: firstId });
+  expect((await rider.query(api.rides.getRide, { rideId: firstId }))?.status).toBe(
+    "cancelled",
+  );
+  expect(await rider.query(api.rides.activeRide, { side: "rider" })).toBeNull();
+
+  // A cancelled ride is not active, so the rider can book again immediately.
+  const secondId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  expect((await rider.query(api.rides.getRide, { rideId: secondId }))?.status).toBe(
+    "requested",
+  );
+  expect(secondId).not.toBe(firstId);
+});
+
+test("cancellation is allowed after matching, but locked once the trip starts", async () => {
+  const { rider, driver } = await setup();
+  await onboardDriver(driver);
+
+  // Book → a driver accepts → `matched` (still pre-start).
+  const rideId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  await driver.mutation(api.rides.acceptRide, { rideId });
+
+  // A stranger (the driver) cannot cancel on the rider's behalf.
+  await expect(
+    driver.mutation(api.rides.cancelRide, { rideId }),
+  ).rejects.toThrow("Only the rider can cancel this ride.");
+
+  // The rider can still cancel while matched — the trip hasn't started.
+  await rider.mutation(api.rides.cancelRide, { rideId });
+  expect((await rider.query(api.rides.getRide, { rideId }))?.status).toBe("cancelled");
+
+  // ...and is free to book again, which the same driver accepts.
+  const startedId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  await driver.mutation(api.rides.acceptRide, { rideId: startedId });
+  const codes = await rider.query(api.rides.activeRide, { side: "rider" });
+  await driver.mutation(api.rides.updateRideStatus, {
+    rideId: startedId,
+    status: "arriving",
+  });
+  await driver.mutation(api.rides.updateRideStatus, {
+    rideId: startedId,
+    status: "in_progress",
+    otp: codes!.pickupOtp!,
+  });
+
+  // Once the trip is on the road it can no longer be cancelled.
+  await expect(
+    rider.mutation(api.rides.cancelRide, { rideId: startedId }),
+  ).rejects.toThrow("This ride can no longer be cancelled.");
+});
