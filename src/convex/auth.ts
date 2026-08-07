@@ -9,6 +9,7 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
 import { Phone } from "@convex-dev/auth/providers/Phone";
+import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import axios from "axios";
 import { emailOtp } from "./auth/emailOtp";
 import { isValidIndianPhone, normalizeIndianPhone } from "./phone";
@@ -33,6 +34,16 @@ const phoneOtp = Phone({
   id: "phone-otp",
   maxAge: OTP_TTL_MS / 1000,
   normalizeIdentifier: (identifier) => normalizeIndianPhone(identifier),
+  // 6-digit numeric code, matching the OTP input on the sign-in card (the
+  // default is a 32-char alphanumeric token, which the 6-slot UI can't hold).
+  generateVerificationToken: async () => {
+    const random: RandomReader = {
+      read(bytes: Uint8Array) {
+        crypto.getRandomValues(bytes);
+      },
+    };
+    return generateRandomString(random, "0123456789", 6);
+  },
   sendVerificationRequest: async ({ identifier, token }, ctx) => {
     if (!isValidIndianPhone(identifier)) {
       throw new Error("Enter a valid 10-digit Indian mobile number.");

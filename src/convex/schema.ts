@@ -69,14 +69,17 @@ const schema = defineSchema(
 
       // Phone-OTP accounts (Convex Auth Phone provider): the normalized
       // E.164-ish number (91XXXXXXXXXX) is the account identifier and is
-      // verified when the user signs in with an SMS code.
-      phoneNumber: v.optional(v.string()),
-      phoneNumberVerificationTime: v.optional(v.number()),
+      // verified when the user signs in with an SMS code. Field names and the
+      // `phone` index MUST match what @convex-dev/auth queries
+      // (uniqueUserWithVerifiedPhone uses withIndex("phone") on the `phone`
+      // field and filters on `phoneVerificationTime`).
+      phone: v.optional(v.string()),
+      phoneVerificationTime: v.optional(v.number()),
 
       role: v.optional(roleValidator), // role of the user. do not remove
     })
       .index("email", ["email"]) // index for the email. do not remove or modify
-      .index("phone", ["phoneNumber"]),
+      .index("phone", ["phone"]),
 
     // A ride connects a rider and a driver through its lifecycle.
     // Convex queries over this table are live WebSocket subscriptions, so a
