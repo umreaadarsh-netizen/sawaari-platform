@@ -24,6 +24,8 @@ import type { Id } from "./convex/_generated/dataModel";
 const PICKUP = { address: "Gotegaon Chauraha, MP", lat: 22.92, lng: 79.18 };
 // ~2.22 km south of the pickup (0.02° of latitude).
 const DROPOFF = { address: "Gotegaon Bus Stand, MP", lat: 22.9, lng: 79.18 };
+// ~4.45 km south (0.04° of latitude) — a longer hop for a second, distinct fare.
+const DROPOFF2 = { address: "Kundam, MP", lat: 22.88, lng: 79.18 };
 
 type Harness = Awaited<ReturnType<typeof setup>>["rider"];
 
@@ -82,10 +84,13 @@ async function onboardDriver(driver: Harness) {
 async function completeRide(
   rider: Harness,
   driver: Harness,
+  route: { pickup?: typeof PICKUP; dropoff?: typeof PICKUP } = {},
 ): Promise<Id<"rides">> {
+  const pickup = route.pickup ?? PICKUP;
+  const dropoff = route.dropoff ?? DROPOFF;
   const rideId = await rider.mutation(api.rides.requestRide, {
-    pickup: PICKUP,
-    dropoff: DROPOFF,
+    pickup,
+    dropoff,
     vehicleType: "classic",
   });
   await driver.mutation(api.rides.acceptRide, { rideId });
@@ -360,4 +365,78 @@ test("cancellation is allowed after matching, but locked once the trip starts", 
   await expect(
     rider.mutation(api.rides.cancelRide, { rideId: startedId }),
   ).rejects.toThrow("This ride can no longer be cancelled.");
+});
+
+test("admin ledger: platform-retained totals balance against settled receipts", async () => {
+  const { rider, driver } = await setup();
+  await onboardDriver(driver);
+
+  // The rider claims the workspace admin seat — the first caller wins.
+  await rider.mutation(api.admin.becomeAdmin, {});
+  await expect(
+    driver.mutation(api.admin.becomeAdmin, {}),
+  ).rejects.toThrow("This workspace already has an administrator.");
+
+  // Non-admins are locked out of the ledger and the receipts book.
+  await expect(driver.query(api.admin.adminStats, {})).rejects.toThrow(
+    "Administrator access required.",
+  );
+  await expect(driver.query(api.admin.adminListReceipts, {})).rejects.toThrow(
+    "Administrator access required.",
+  );
+
+  // Settle two trips end to end: ₹60 via UPI, ₹90 via cash.
+  const ride1 = await completeRide(rider, driver);
+  await rider.mutation(api.rides.payRide, { rideId: ride1, method: "upi" });
+  const ride2 = await completeRide(rider, driver, { dropoff: DROPOFF2 });
+  await rider.mutation(api.rides.payRide, { rideId: ride2, method: "cash" });
+
+  // The admin dashboard ledger, derived from the receipts: 60 + 90 = 150
+  // gross, driver 45 + round(0.75 × 90) = 68, platform 15 + 22 = 37.
+  const stats = await rider.query(api.admin.adminStats, {});
+  expect(stats).toMatchObject({
+    totalRides: 2,
+    activeRides: 0,
+    completedRides: 2,
+    paidRides: 2,
+    revenue: 150,
+    faresCollected: 150,
+    driverPayouts: 113,
+    platformRevenue: 37,
+    upiRevenue: 60,
+    cashRevenue: 90,
+    qrRevenue: 0,
+    onlineDrivers: 1,
+    totalDrivers: 1,
+    totalUsers: 2,
+  });
+
+  // The driver's wallet mirrors the same ledger (75% + 25% per settled fare).
+  const wallet = await driver.query(api.wallet.myWallet, {});
+  expect(wallet).toMatchObject({
+    driverEarnings: 113,
+    platformRetained: 37,
+    totalFares: 150,
+    settledRides: 2,
+  });
+
+  // The receipts book is the permanent record: one row per settled fare with
+  // the frozen split stamped on it, gross always equal to driver + platform.
+  const receipts = await rider.query(api.admin.adminListReceipts, {});
+  expect(receipts).toHaveLength(2);
+  expect(receipts.map((r) => r.totalFare).sort()).toEqual([60, 90]);
+  expect(receipts.map((r) => r.driverShare).sort()).toEqual([45, 68]);
+  expect(receipts.map((r) => r.platformShare).sort()).toEqual([15, 22]);
+  expect(receipts.map((r) => r.paymentMethod).sort()).toEqual(["cash", "upi"]);
+  for (const r of receipts) {
+    expect(r.driverShare + r.platformShare).toBe(r.totalFare);
+  }
+
+  // The rides ledger agrees, and OTP secrets never leak into admin views.
+  const all = await rider.query(api.admin.listAllRides, {});
+  expect(all).toHaveLength(2);
+  expect(all.every((r) => r.status === "completed")).toBe(true);
+  expect(
+    all.every((r) => r.pickupOtp === undefined && r.completionOtp === undefined),
+  ).toBe(true);
 });
