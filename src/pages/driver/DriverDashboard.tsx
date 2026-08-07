@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
@@ -51,11 +51,16 @@ export default function DriverDashboard() {
   const myTrips = useQuery(api.rides.myRides);
   const wallet = useQuery(api.wallet.myWallet);
   const feedback = useQuery(api.ratings.driverRatings);
+  const connect = useQuery(api.stripeQueries.myConnectAccount);
+  const payouts = useQuery(api.wallet.myPayouts);
   const saveProfile = useMutation(api.drivers.saveProfile);
   const setOnline = useMutation(api.drivers.setOnline);
   const updateLocation = useMutation(api.drivers.updateLocation);
   const acceptRide = useMutation(api.rides.acceptRide);
   const updateRideStatus = useMutation(api.rides.updateRideStatus);
+  const createConnectAccount = useAction(api.stripe.createConnectAccount);
+  const getConnectAccountLink = useAction(api.stripe.getConnectAccountLink);
+  const requestPayout = useAction(api.stripe.requestPayout);
 
   const [form, setForm] = useState({
     name: user?.name ?? "",
@@ -75,6 +80,48 @@ export default function DriverDashboard() {
     driverShare: number;
     platformShare: number;
   } | null>(null);
+  const [onboarding, setOnboarding] = useState(false);
+  const [payoutBusy, setPayoutBusy] = useState(false);
+
+  // ---- Stripe Connect onboarding + payouts --------------------------------
+  const handleConnect = async () => {
+    setOnboarding(true);
+    try {
+      const { url } = await createConnectAccount({
+        origin: window.location.origin,
+      });
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't start Stripe onboarding.");
+      setOnboarding(false);
+    }
+  };
+
+  const handleFinishOnboarding = async () => {
+    setOnboarding(true);
+    try {
+      const { url } = await getConnectAccountLink({
+        origin: window.location.origin,
+      });
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open Stripe onboarding.");
+      setOnboarding(false);
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    setPayoutBusy(true);
+    try {
+      const res = await requestPayout();
+      toast.success(
+        `Payout of ${formatINR(res.amountPaise / 100)} initiated — on its way to your bank.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Payout failed.");
+    }
+    setPayoutBusy(false);
+  };
 
   const ride = activeRide ?? null;
   const online = myProfile?.online ?? false;
@@ -526,6 +573,135 @@ export default function DriverDashboard() {
                       Platform fee 25% · {formatINR(wallet?.platformRetained ?? 0)}
                     </span>
                   </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      <ArrowUpCircle className="size-3.5 text-emerald-300" />
+                      Stripe payouts
+                    </p>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                        connect?.payoutsEnabled
+                          ? "bg-emerald-400/10 text-emerald-300"
+                          : connect?.accountId
+                            ? "bg-amber-400/10 text-amber-300"
+                            : "bg-white/5 text-slate-400",
+                      )}
+                    >
+                      {connect?.payoutsEnabled
+                        ? "Ready"
+                        : connect?.accountId
+                          ? "Onboarding"
+                          : "Not connected"}
+                    </span>
+                  </div>
+
+                  {!connect ? (
+                    <>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                        Connect a Stripe account to have your 75% earnings paid
+                        straight to your bank on withdrawal.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleConnect()}
+                        disabled={onboarding}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-xs font-semibold text-white transition-colors hover:bg-white/15 disabled:opacity-60"
+                      >
+                        {onboarding ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <ArrowUpCircle className="size-3.5 text-emerald-300" />
+                        )}
+                        {onboarding ? "Opening Stripe…" : "Connect with Stripe"}
+                      </button>
+                    </>
+                  ) : !connect.payoutsEnabled ? (
+                    <>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                        Finish Stripe onboarding to enable bank payouts — you
+                        can keep earning in the meantime.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleFinishOnboarding()}
+                        disabled={onboarding}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400/15 px-4 py-3 text-xs font-semibold text-amber-300 ring-1 ring-amber-400/30 transition-colors hover:bg-amber-400/25 disabled:opacity-60"
+                      >
+                        {onboarding ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <ArrowUpCircle className="size-3.5" />
+                        )}
+                        {onboarding ? "Opening Stripe…" : "Complete Stripe onboarding"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-[11px] text-slate-500">
+                        Available to withdraw
+                      </p>
+                      <p className="mt-0.5 font-display text-xl font-semibold text-white">
+                        {formatINR(wallet?.driverEarnings ?? 0)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleRequestPayout()}
+                        disabled={
+                          payoutBusy || (wallet?.driverEarnings ?? 0) < 50
+                        }
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-xs font-bold text-emerald-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+                      >
+                        {payoutBusy ? (
+                          <>
+                            <Loader2 className="size-3.5 animate-spin" />{" "}
+                            Transferring…
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUpCircle className="size-3.5" /> Withdraw{" "}
+                            {formatINR(wallet?.driverEarnings ?? 0)}
+                          </>
+                        )}
+                      </button>
+                      <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
+                        Transfers land in your connected bank via Stripe Connect.
+                      </p>
+                    </>
+                  )}
+
+                  {(payouts ?? []).length > 0 && (
+                    <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
+                      {payouts.slice(0, 3).map((p) => (
+                        <div
+                          key={p._id}
+                          className="flex items-center justify-between gap-2 text-[11px]"
+                        >
+                          <span className="text-slate-500">
+                            {format(new Date(p.createdAt), "d MMM · h:mm a")}
+                          </span>
+                          <span className="font-semibold text-slate-200">
+                            {formatINR(p.amountPaise / 100)}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                              p.status === "paid"
+                                ? "bg-emerald-400/10 text-emerald-300"
+                                : p.status === "pending"
+                                  ? "bg-amber-400/10 text-amber-300"
+                                  : "bg-rose-400/10 text-rose-300",
+                            )}
+                          >
+                            {p.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">

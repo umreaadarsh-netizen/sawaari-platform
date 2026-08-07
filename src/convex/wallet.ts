@@ -62,6 +62,103 @@ export const internalCreditWallet = internalMutation({
   },
 });
 
+/**
+ * INTERNAL — credit a rider's pre-paid wallet balance (Stripe
+ * `wallet_topup` PaymentIntents land here via the webhook). The wallet row is
+ * shared with the driver earnings ledger; `riderBalance` is the rider-side
+ * float and never touches the 75/25 split numbers.
+ */
+export const internalTopUpRiderWallet = internalMutation({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(), // whole ₹ captured
+    settledAt: v.number(),
+  },
+  handler: async (ctx, { userId, amount, settledAt }) => {
+    const existing = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        riderBalance: (existing.riderBalance ?? 0) + amount,
+        updatedAt: settledAt,
+      });
+    } else {
+      await ctx.db.insert("wallets", {
+        userId,
+        driverEarnings: 0,
+        platformRetained: 0,
+        totalFares: 0,
+        settledRides: 0,
+        riderBalance: amount,
+        updatedAt: settledAt,
+      });
+    }
+  },
+});
+
+/**
+ * INTERNAL — open a payout for a driver's Stripe Connect transfer: debits the
+ * driver's earnings wallet by the amount and records a `payouts` row in
+ * `pending` state. The Stripe action creates the Transfer afterwards and
+ * flips the row to `paid` via `markPayoutPaid`. Debits and records happen in
+ * one atomic mutation so the ledger can never lose track of money that left.
+ */
+export const internalCreatePayout = internalMutation({
+  args: {
+    driverId: v.id("users"),
+    amountPaise: v.number(),
+    currency: v.string(),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, { driverId, amountPaise, currency, createdAt }) => {
+    const amount = Math.round(amountPaise / 100); // whole ₹ from paise
+    const existing = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("userId", driverId))
+      .first();
+    if (!existing || existing.driverEarnings < amount) {
+      throw new Error("Insufficient earnings for payout.");
+    }
+    await ctx.db.patch(existing._id, {
+      driverEarnings: existing.driverEarnings - amount,
+      updatedAt: createdAt,
+    });
+    return await ctx.db.insert("payouts", {
+      driverId,
+      amountPaise,
+      currency,
+      status: "pending",
+      createdAt,
+    });
+  },
+});
+
+/**
+ * INTERNAL — reverse a failed payout: credit the driver's earnings back.
+ * Called by `stripe.requestPayout` when the Connect Transfer throws, so a
+ * failed transfer never silently eats driver earnings.
+ */
+export const internalRefundPayout = internalMutation({
+  args: {
+    driverId: v.id("users"),
+    amount: v.number(), // whole ₹ to credit back
+    settledAt: v.number(),
+  },
+  handler: async (ctx, { driverId, amount, settledAt }) => {
+    const existing = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("userId", driverId))
+      .first();
+    if (!existing) return;
+    await ctx.db.patch(existing._id, {
+      driverEarnings: existing.driverEarnings + amount,
+      updatedAt: settledAt,
+    });
+  },
+});
+
 /** The current user's earnings wallet — the driver's cumulative 75% balance. */
 export const myWallet = query({
   args: {},
@@ -74,5 +171,19 @@ export const myWallet = query({
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .first()) ?? null
     );
+  },
+});
+
+/** The signed-in driver's Stripe Connect payout history, newest first. */
+export const myPayouts = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return [];
+    return await ctx.db
+      .query("payouts")
+      .withIndex("by_driver_created", (q) => q.eq("driverId", user._id))
+      .order("desc")
+      .take(20);
   },
 });

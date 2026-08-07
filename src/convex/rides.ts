@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getCurrentUser, requireRole, requireUser } from "./users";
 import { FleetVehicle, getFleetRates } from "./fleet";
@@ -180,6 +180,81 @@ export const activeRide = query({
 });
 
 /**
+ * Shared settlement core: writes the receipt, credits the driver's earnings
+ * wallet (internal mutation) and marks the ride paid. Both the public
+ * `payRide` gate (UPI / system-QR / cash) and the internal Stripe webhook
+ * path (`internalSettleRideFromStripe`) run through this exact code, so every
+ * captured fare lands in the ledger identically and the numbers can never
+ * drift between payment rails.
+ */
+async function settleRideCore(
+  ctx: MutationCtx,
+  ride: Doc<"rides">,
+  method: "upi" | "card" | "qr" | "cash",
+  ref: string | undefined,
+  settledAt: number,
+) {
+  const rates = await getFleetRates(ctx, ride.vehicleType);
+  const baseFare = Math.min(rates.baseFare, ride.fare);
+  const distanceFare = ride.fare - baseFare;
+
+  // Reuse the split frozen on the ride at completion (or compute it for
+  // rides completed before the split shipped). The receipt carries the same
+  // 75/25 numbers so the ledger can never drift from the ride record.
+  const split =
+    ride.driverShare !== undefined && ride.platformShare !== undefined
+      ? { driverShare: ride.driverShare, platformShare: ride.platformShare }
+      : splitFare(ride.fare);
+
+  await ctx.db.insert("receipts", {
+    rideId: ride._id,
+    receiptNo: `SW-${ride._id.slice(-6).toUpperCase()}`,
+    riderId: ride.riderId,
+    riderName: ride.riderName,
+    driverId: ride.driverId,
+    driverName: ride.driverName,
+    vehicleNo: ride.vehicleNo,
+    vehicleType: ride.vehicleType,
+    pickup: ride.pickup,
+    dropoff: ride.dropoff,
+    distanceKm: ride.distanceKm,
+    baseFare,
+    distanceFare,
+    totalFare: ride.fare,
+    driverShare: split.driverShare,
+    platformShare: split.platformShare,
+    commissionRate: DRIVER_SHARE_RATE,
+    paymentMethod: method,
+    // UPI/QR carry a minted UTRN; card carries the Stripe PaymentIntent id.
+    upiRef:
+      method === "upi" || method === "qr"
+        ? ref?.trim() || genUtrn()
+        : ref ?? undefined,
+    settledAt,
+  });
+
+  // The fare lands in the platform's transaction ledger (the receipt above,
+  // full fare). From that pot, the driver's 75% share is credited to their
+  // earnings wallet now that the fare is actually in. Settlement runs through
+  // an internal mutation — money movement is never exposed on the public API.
+  if (ride.driverId) {
+    await ctx.runMutation(internal.wallet.internalCreditWallet, {
+      userId: ride.driverId,
+      fare: ride.fare,
+      driverShare: split.driverShare,
+      platformShare: split.platformShare,
+      settledAt,
+    });
+  }
+
+  await ctx.db.patch(ride._id, {
+    paid: true,
+    paidAt: settledAt,
+    paymentMethod: method,
+  });
+}
+
+/**
  * Capture payment for a completed trip and write its permanent receipt.
  *
  * UPI captures carry a UTRN (the transaction reference from the rider's UPI
@@ -193,8 +268,8 @@ export const payRide = mutation({
     rideId: v.id("rides"),
     method: v.union(
       v.literal("upi"),
-      v.literal("card"),
       v.literal("qr"), // SAWAARI system QR — full fare credited to the platform
+      v.literal("card"),
       v.literal("cash"),
     ),
     upiRef: v.optional(v.string()), // real gateway reference, when wired up
@@ -211,65 +286,34 @@ export const payRide = mutation({
     }
     if (ride.paid) throw new Error("This trip is already settled.");
 
-    const rates = await getFleetRates(ctx, ride.vehicleType);
-    const baseFare = Math.min(rates.baseFare, ride.fare);
-    const distanceFare = ride.fare - baseFare;
-    const settledAt = Date.now();
+    await settleRideCore(ctx, ride, method, upiRef, Date.now());
+  },
+});
 
-    // Reuse the split frozen on the ride at completion (or compute it for
-    // rides completed before the split shipped). The receipt carries the same
-    // 75/25 numbers so the ledger can never drift from the ride record.
-    const split =
-      ride.driverShare !== undefined && ride.platformShare !== undefined
-        ? { driverShare: ride.driverShare, platformShare: ride.platformShare }
-        : splitFare(ride.fare);
-
-    await ctx.db.insert("receipts", {
-      rideId,
-      receiptNo: `SW-${rideId.slice(-6).toUpperCase()}`,
-      riderId: ride.riderId,
-      riderName: ride.riderName,
-      driverId: ride.driverId,
-      driverName: ride.driverName,
-      vehicleNo: ride.vehicleNo,
-      vehicleType: ride.vehicleType,
-      pickup: ride.pickup,
-      dropoff: ride.dropoff,
-      distanceKm: ride.distanceKm,
-      baseFare,
-      distanceFare,
-      totalFare: ride.fare,
-      driverShare: split.driverShare,
-      platformShare: split.platformShare,
-      commissionRate: DRIVER_SHARE_RATE,
-      paymentMethod: method,
-      upiRef:
-        method === "upi" || method === "qr"
-          ? upiRef?.trim() || genUtrn()
-          : undefined,
-      settledAt,
-    });
-
-    // System-QR / UPI / card fares land in the platform's transaction ledger
-    // (the receipt above, full fare). From that pot, the driver's 75% share
-    // is credited to their earnings wallet now that the fare is actually in.
-    // Settlement runs through an internal mutation — money movement is never
-    // exposed on the public API surface.
-    if (ride.driverId) {
-      await ctx.runMutation(internal.wallet.internalCreditWallet, {
-        userId: ride.driverId,
-        fare: ride.fare,
-        driverShare: split.driverShare,
-        platformShare: split.platformShare,
-        settledAt,
-      });
+/**
+ * INTERNAL — settle a ride that was paid with a Stripe PaymentIntent. Called
+ * from the `/stripe/webhook` handler on `payment_intent.succeeded`; runs the
+ * exact same receipt + wallet-credit core as `payRide` so card settlements
+ * are indistinguishable from UPI/QR in the ledger. Internal-only, like every
+ * other money-movement function.
+ */
+export const internalSettleRideFromStripe = internalMutation({
+  args: {
+    rideId: v.id("rides"),
+    paymentIntentId: v.string(),
+  },
+  handler: async (ctx, { rideId, paymentIntentId }) => {
+    const ride = await ctx.db.get(rideId);
+    if (!ride) throw new Error("Ride not found.");
+    if (ride.status !== "completed") {
+      throw new Error("Payment is available once the trip is completed.");
     }
+    if (ride.paid) throw new Error("This trip is already settled.");
 
-    await ctx.db.patch(rideId, {
-      paid: true,
-      paidAt: settledAt,
-      paymentMethod: method,
-    });
+    // InternalMutationCtx is structurally compatible for the db + runMutation
+    // surface `settleRideCore` touches; the cast keeps the shared core typed
+    // against the public mutation context without duplicating money code.
+    await settleRideCore(ctx as unknown as MutationCtx, ride, "card", paymentIntentId, Date.now());
   },
 });
 

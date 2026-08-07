@@ -77,9 +77,26 @@ const schema = defineSchema(
       phoneVerificationTime: v.optional(v.number()),
 
       role: v.optional(roleValidator), // role of the user. do not remove
+
+      // Stripe refs (all server-written via webhooks/internal mutations):
+      // `stripeCustomerId` — the rider's PaymentMethods/Customer vault for
+      //   one-click card payments;
+      // `stripeAccountId` — the driver's Stripe Connect Express account used
+      //   for direct payouts;
+      // the `stripe*Enabled` flags are synced from `account.updated` webhooks
+      //   and gate whether a driver may request a payout;
+      // `stripePaymentMethodId` — the vaulted default card (SetupIntent).
+      stripeCustomerId: v.optional(v.string()),
+      stripeAccountId: v.optional(v.string()),
+      stripeDetailsSubmitted: v.optional(v.boolean()),
+      stripeChargesEnabled: v.optional(v.boolean()),
+      stripePayoutsEnabled: v.optional(v.boolean()),
+      stripePaymentMethodId: v.optional(v.string()),
     })
       .index("email", ["email"]) // index for the email. do not remove or modify
-      .index("phone", ["phone"]),
+      .index("phone", ["phone"])
+      .index("stripe_customer", ["stripeCustomerId"])
+      .index("stripe_account", ["stripeAccountId"]),
 
     // A ride connects a rider and a driver through its lifecycle.
     // Convex queries over this table are live WebSocket subscriptions, so a
@@ -132,8 +149,58 @@ const schema = defineSchema(
       platformRetained: v.number(), // 25% retained by the platform
       totalFares: v.number(), // gross fares collected through the platform
       settledRides: v.number(),
+      // Optional pre-paid rider balance — credited via Stripe
+      // `payment_intent.succeeded` webhooks for `wallet_topup` intents.
+      riderBalance: v.optional(v.number()),
       updatedAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    // Idempotency ledger for Stripe webhooks. Stripe delivers events
+    // at-least-once, so every processed event id is recorded here (unique
+    // index) and re-deliveries are skipped.
+    stripeEvents: defineTable({
+      eventId: v.string(), // Stripe event id, e.g. evt_...
+      type: v.string(),
+      processedAt: v.number(),
+    }).index("by_event_id", ["eventId"]),
+
+    // Every Stripe PaymentIntent we create, tracked from creation through
+    // webhook confirmation so settlement is auditable and idempotent.
+    payments: defineTable({
+      stripePaymentIntentId: v.string(),
+      userId: v.id("users"),
+      purpose: v.union(v.literal("ride"), v.literal("wallet_topup")),
+      rideId: v.optional(v.id("rides")),
+      amountPaise: v.number(),
+      currency: v.string(),
+      status: v.union(
+        v.literal("created"),
+        v.literal("succeeded"),
+        v.literal("failed"),
+      ),
+      createdAt: v.number(),
+      settledAt: v.optional(v.number()),
+    })
+      .index("by_user_created", ["userId", "createdAt"])
+      .index("by_pi", ["stripePaymentIntentId"]),
+
+    // Stripe Connect transfers initiated from driver earnings — the record
+    // of money leaving the platform wallet to a driver's bank.
+    payouts: defineTable({
+      driverId: v.id("users"),
+      amountPaise: v.number(),
+      currency: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("paid"),
+        v.literal("failed"),
+      ),
+      transferId: v.optional(v.string()),
+      createdAt: v.number(),
+      paidAt: v.optional(v.number()),
+    })
+      .index("by_driver_created", ["driverId", "createdAt"])
+      .index("by_transfer", ["transferId"]),
 
     // Online EV auto drivers whose live location is streamed to riders.
     drivers: defineTable({

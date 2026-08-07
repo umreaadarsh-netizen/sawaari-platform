@@ -1,5 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { query, QueryCtx, MutationCtx } from "./_generated/server";
+import { query, QueryCtx, MutationCtx, ActionCtx } from "./_generated/server";
+import { api } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import type { Role } from "./schema";
 
 /**
@@ -63,6 +65,36 @@ export const requireRole = async (
   message = "You don't have permission to do that.",
 ) => {
   const user = await requireUser(ctx);
+  if (user.role !== role) throw new Error(message);
+  return user;
+};
+
+/**
+ * Same hard auth gate as `requireUser`, but for Node-runtime `action`
+ * handlers (Stripe actions). `getAuthUserId` and `getUserIdentity` accept
+ * action contexts, so sessions validate identically here.
+ */
+export const requireUserAction = async (ctx: ActionCtx): Promise<Doc<"users">> => {
+  const userId = await getAuthUserId(ctx);
+  if (userId === null) throw new Error("Please sign in.");
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Please sign in.");
+  const user = await ctx.runQuery(api.users.currentUser, {});
+  if (!user) throw new Error("Please sign in.");
+  return user;
+};
+
+/**
+ * Role gate for actions: requires a signed-in user carrying `role`, throwing
+ * the provided denial message otherwise. Used by Stripe Connect actions that
+ * only drivers may call.
+ */
+export const requireRoleAction = async (
+  ctx: ActionCtx,
+  role: Role,
+  message = "You don't have permission to do that.",
+): Promise<Doc<"users">> => {
+  const user = await requireUserAction(ctx);
   if (user.role !== role) throw new Error(message);
   return user;
 };

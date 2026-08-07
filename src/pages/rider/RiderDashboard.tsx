@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +24,7 @@ import { SawaariMap, MapMarker } from "@/components/map/SawaariMap";
 import { StatusTimeline } from "@/components/ride/StatusTimeline";
 import { ChatPanel } from "@/components/ride/ChatPanel";
 import { TripHistory } from "@/components/ride/TripHistory";
+import { StripeCardPayment } from "@/components/ride/StripeCardPayment";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -1202,8 +1203,62 @@ function CheckoutCard({
   onPaid: (ride: Doc<"rides">) => void;
 }) {
   const payRide = useMutation(api.rides.payRide);
+  const getStripeKeys = useAction(api.stripe.getStripeKeys);
+  const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
   const [method, setMethod] = useState<"upi" | "card" | "qr" | "cash">("upi");
   const [paying, setPaying] = useState(false);
+  // Real Stripe path: enabled flag (needs server keys) + the live intent.
+  const [stripeEnabled, setStripeEnabled] = useState<boolean | null>(null);
+  const [stripeIntent, setStripeIntent] = useState<{
+    clientSecret: string;
+    publishableKey: string | null;
+  } | null>(null);
+  const [preparingCard, setPreparingCard] = useState(false);
+
+  // When Card is selected, ask the server whether Stripe is wired up.
+  useEffect(() => {
+    if (method !== "card" || stripeEnabled !== null) return;
+    let alive = true;
+    getStripeKeys()
+      .then((k) => {
+        if (alive) setStripeEnabled(k.enabled);
+      })
+      .catch(() => {
+        if (alive) setStripeEnabled(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [method, stripeEnabled, getStripeKeys]);
+
+  // With Stripe live, mint a PaymentIntent for this exact fare the moment
+  // the rider picks Card — the client secret powers the PaymentElement.
+  useEffect(() => {
+    if (method !== "card" || stripeEnabled !== true || stripeIntent) return;
+    let alive = true;
+    setPreparingCard(true);
+    createPaymentIntent({ amount: ride.fare, purpose: "ride", rideId: ride._id })
+      .then((res) => {
+        if (!alive) return;
+        setStripeIntent({
+          clientSecret: res.clientSecret,
+          publishableKey: res.publishableKey,
+        });
+      })
+      .catch((e) => {
+        if (alive) {
+          toast.error(
+            e instanceof Error ? e.message : "Couldn't start secure checkout.",
+          );
+        }
+      })
+      .finally(() => {
+        if (alive) setPreparingCard(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [method, stripeEnabled, stripeIntent, createPaymentIntent, ride]);
 
   const rates = vehicle ?? vehicleById("classic");
   const baseShown = ride.fare >= rates.baseFare ? rates.baseFare : ride.fare;
@@ -1334,22 +1389,51 @@ function CheckoutCard({
         </div>
       )}
 
-      <Button
-        type="button"
-        onClick={() => void handlePay()}
-        disabled={paying}
-        className="mt-auto w-full bg-emerald-500 py-5 text-[15px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
-      >
-        {paying ? (
-          <>
-            <Loader2 className="size-4 animate-spin" /> Processing payment…
-          </>
+      {method === "card" &&
+        stripeEnabled === true &&
+        (stripeIntent ? (
+          <StripeCardPayment
+            clientSecret={stripeIntent.clientSecret}
+            publishableKey={stripeIntent.publishableKey}
+            amount={ride.fare}
+            onSuccess={() => {
+              toast.success("Payment successful — receipt issued.");
+              onPaid(ride);
+            }}
+          />
         ) : (
-          <>
-            Pay {formatINR(ride.fare)} <ChevronRight className="size-4" />
-          </>
-        )}
-      </Button>
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/50 p-4 text-xs text-slate-400">
+            <Loader2 className="size-4 animate-spin text-emerald-300" />
+            {preparingCard
+              ? "Preparing secure checkout…"
+              : "Secure checkout unavailable — try UPI or cash."}
+          </div>
+        ))}
+      {method === "card" && stripeEnabled === false && (
+        <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
+          Stripe isn&apos;t configured in this preview — the fare will be
+          captured as a test card payment instead.
+        </p>
+      )}
+
+      {!(method === "card" && stripeEnabled === true && stripeIntent) && (
+        <Button
+          type="button"
+          onClick={() => void handlePay()}
+          disabled={paying}
+          className="mt-auto w-full bg-emerald-500 py-5 text-[15px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
+        >
+          {paying ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Processing payment…
+            </>
+          ) : (
+            <>
+              Pay {formatINR(ride.fare)} <ChevronRight className="size-4" />
+            </>
+          )}
+        </Button>
+      )}
       <p className="text-center text-[11px] text-slate-500">
         A receipt is issued instantly. QR, UPI and card fares are captured by
         the SAWAARI platform; cash is settled directly with your driver.
