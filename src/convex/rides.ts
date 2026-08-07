@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./users";
+import { internal } from "./_generated/api";
+import { getCurrentUser, requireRole, requireUser } from "./users";
 import { FleetVehicle, getFleetRates } from "./fleet";
-import { DRIVER_SHARE_RATE, creditWallet, splitFare } from "./wallet";
+import { DRIVER_SHARE_RATE, splitFare } from "./wallet";
 import type { Doc } from "./_generated/dataModel";
 
 // ---- shared helpers -------------------------------------------------------
@@ -89,8 +90,13 @@ export const requestRide = mutation({
     scheduledFor: v.optional(v.number()),
   },
   handler: async (ctx, { pickup, dropoff, vehicleType, scheduledFor }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in to book a ride.");
+    const user = await requireUser(ctx);
+
+    // RBAC data hygiene: a user who books a ride is a rider. Never overwrite
+    // an existing role (e.g. a driver or admin who also rides).
+    if (user.role === undefined) {
+      await ctx.db.patch(user._id, { role: "rider" });
+    }
 
     const distanceKm = haversineKm(
       pickup.lat,
@@ -194,8 +200,7 @@ export const payRide = mutation({
     upiRef: v.optional(v.string()), // real gateway reference, when wired up
   },
   handler: async (ctx, { rideId, method, upiRef }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in.");
+    const user = await requireUser(ctx);
     const ride = await ctx.db.get(rideId);
     if (!ride) throw new Error("Ride not found.");
     if (ride.riderId !== user._id) {
@@ -248,15 +253,16 @@ export const payRide = mutation({
     // System-QR / UPI / card fares land in the platform's transaction ledger
     // (the receipt above, full fare). From that pot, the driver's 75% share
     // is credited to their earnings wallet now that the fare is actually in.
+    // Settlement runs through an internal mutation — money movement is never
+    // exposed on the public API surface.
     if (ride.driverId) {
-      await creditWallet(
-        ctx,
-        ride.driverId,
-        ride.fare,
-        split.driverShare,
-        split.platformShare,
+      await ctx.runMutation(internal.wallet.internalCreditWallet, {
+        userId: ride.driverId,
+        fare: ride.fare,
+        driverShare: split.driverShare,
+        platformShare: split.platformShare,
         settledAt,
-      );
+      });
     }
 
     await ctx.db.patch(rideId, {
@@ -383,13 +389,15 @@ export const openRides = query({
 export const acceptRide = mutation({
   args: { rideId: v.id("rides") },
   handler: async (ctx, { rideId }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in.");
+    const user = await requireUser(ctx);
     const driver = await ctx.db
       .query("drivers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (!driver) throw new Error("Create a driver profile first.");
+    // RBAC: accepting rides is a driver-only action. `saveProfile` grants the
+    // driver role on onboarding, so a profile implies the role.
+    await requireRole(ctx, "driver", "Driver access required.");
     if (!driver.online) throw new Error("Go online to accept rides.");
 
     const ride = await ctx.db.get(rideId);
@@ -439,8 +447,9 @@ export const updateRideStatus = mutation({
     otp: v.optional(v.string()),
   },
   handler: async (ctx, { rideId, status, otp }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in.");
+    const user = await requireUser(ctx);
+    // RBAC: driving a trip is a driver-only action.
+    await requireRole(ctx, "driver", "Driver access required.");
     const ride = await ctx.db.get(rideId);
     if (!ride) throw new Error("Ride not found.");
     if (ride.driverId !== user._id) {

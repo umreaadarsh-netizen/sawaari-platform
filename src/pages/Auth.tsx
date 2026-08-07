@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/hooks/use-auth";
 import { SawaariMark } from "@/components/SawaariLogo";
-import { useAction } from "convex/react";
+import { maskPhone, normalizeIndianPhone } from "@/convex/phone";
+import { useQuery } from "convex/react";
 import {
   ArrowRight,
   CarFront,
@@ -38,8 +39,6 @@ type Method = "phone" | "email";
 
 function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
-  const sendOtp = useAction(api.phoneOtp.sendOtp);
-  const verifyOtp = useAction(api.phoneOtp.verifyOtp);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = resolveRedirectAfterAuth(
@@ -54,9 +53,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const [phone, setPhone] = useState("");
   const [phoneStep, setPhoneStep] = useState<"input" | "otp">("input");
   const [phoneOtp, setPhoneOtp] = useState("");
-  const [otpMode, setOtpMode] = useState<"sms" | "demo" | null>(null);
-  const [sentCode, setSentCode] = useState<string | null>(null);
   const [maskedPhone, setMaskedPhone] = useState("");
+
+  // DEV preview: the phone-otp provider surfaces the code via authDemo.demoCode
+  // while no Vonage credentials are configured; in production it returns null.
+  const demoCode = useQuery(
+    api.authDemo.demoCode,
+    phoneStep === "otp" ? { phone: normalizeIndianPhone(phone) } : "skip",
+  );
   const [resendIn, setResendIn] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
@@ -129,10 +133,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await sendOtp({ phone });
-      setOtpMode(result.mode);
-      setSentCode(result.mode === "demo" ? result.code : null);
-      setMaskedPhone(result.maskedPhone);
+      // Step 1 of the phone-otp provider: request a code. Convex Auth mints
+      // it, calls sendVerificationRequest (Vonage SMS, or the dev demo path),
+      // and this call resolves once delivery has been attempted.
+      const formData = new FormData();
+      formData.append("phone", normalizeIndianPhone(phone));
+      await signIn("phone-otp", formData);
+      setMaskedPhone(maskPhone(normalizeIndianPhone(phone)));
       setPhoneOtp("");
       setResendIn(60);
       setPhoneStep("otp");
@@ -152,10 +159,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await sendOtp({ phone });
-      setOtpMode(result.mode);
-      setSentCode(result.mode === "demo" ? result.code : null);
-      setMaskedPhone(result.maskedPhone);
+      const formData = new FormData();
+      formData.append("phone", normalizeIndianPhone(phone));
+      await signIn("phone-otp", formData);
+      setMaskedPhone(maskPhone(normalizeIndianPhone(phone)));
       setPhoneOtp("");
       setResendIn(60);
     } catch (error) {
@@ -176,23 +183,23 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await verifyOtp({ phone, code: phoneOtp });
-      if (!result.valid) {
-        setError("The code you entered doesn't match. Please try again.");
-        setPhoneOtp("");
-        setShakeKey((k) => k + 1);
-        setIsLoading(false);
-        return;
-      }
-      await signIn("anonymous");
+      // Step 2: submit phone + code. Convex Auth verifies the code against the
+      // stored hash (one-time use, rate limited per phone) and issues a real
+      // session bound to the verified number — no anonymous fallback.
+      const formData = new FormData();
+      formData.append("phone", normalizeIndianPhone(phone));
+      formData.append("code", phoneOtp);
+      await signIn("phone-otp", formData);
       navigate(target);
     } catch (error) {
       console.error("Phone OTP sign-in error:", error);
       setError(
         error instanceof Error
           ? error.message
-          : "Sign-in failed. Please try again.",
+          : "The verification code you entered is incorrect.",
       );
+      setPhoneOtp("");
+      setShakeKey((k) => k + 1);
       setIsLoading(false);
     }
   };
@@ -444,12 +451,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               key={shakeKey}
               className={cn("mt-5", shakeKey > 0 && "sawa-shake")}
             >
-              {otpMode === "demo" ? (
+              {demoCode ? (
                 /* no Vonage credentials yet — surface the code for testing */
                 <div className="mx-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-center text-xs text-emerald-200">
                   Demo mode — your code is{" "}
                   <span className="font-mono text-sm font-bold tracking-[0.2em]">
-                    {sentCode}
+                    {demoCode}
                   </span>
                 </div>
               ) : (

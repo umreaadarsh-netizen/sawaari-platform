@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, MutationCtx } from "./_generated/server";
-import { getCurrentUser } from "./users";
+import { getCurrentUser, requireRole } from "./users";
 
 export interface FleetVehicle {
   id: string;
@@ -120,10 +120,7 @@ export const listFleet = query({
 export const saveFleetVehicle = mutation({
   args: vehicleFields,
   handler: async (ctx, vehicle) => {
-    const user = await getCurrentUser(ctx);
-    if (!user || user.role !== "admin") {
-      throw new Error("Administrator access required.");
-    }
+    await requireRole(ctx, "admin", "Administrator access required.");
     const existing = await ctx.db
       .query("fleet")
       .withIndex("by_vehicle_id", (q) => q.eq("id", vehicle.id))
@@ -139,10 +136,7 @@ export const saveFleetVehicle = mutation({
 export const setVehicleEnabled = mutation({
   args: { id: v.string(), enabled: v.boolean() },
   handler: async (ctx, { id, enabled }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user || user.role !== "admin") {
-      throw new Error("Administrator access required.");
-    }
+    await requireRole(ctx, "admin", "Administrator access required.");
     const existing = await ctx.db
       .query("fleet")
       .withIndex("by_vehicle_id", (q) => q.eq("id", id))

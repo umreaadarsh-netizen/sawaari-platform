@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import AdminDashboard from "./AdminDashboard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,8 +128,13 @@ export default function AdminGate() {
   if (unlocked) {
     return (
       <div className="relative min-h-dvh bg-background">
+        {/* The password gate is UX-only — the backend admin functions still
+            require the `admin` role, and this guard bounces non-admins back
+            to the landing page instead of showing error states. */}
         <RequireAuth>
-          <AdminDashboard />
+          <RequireRole role="admin" fallback="/">
+            <AdminDashboard />
+          </RequireRole>
         </RequireAuth>
         <button
           type="button"

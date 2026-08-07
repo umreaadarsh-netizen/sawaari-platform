@@ -1,13 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./users";
+import { requireUser } from "./users";
 import { withoutOtps } from "./rides";
+import { roleValidator } from "./schema";
 
 const ACTIVE = ["requested", "matched", "arriving", "in_progress"] as const;
 
-const requireAdmin = async (ctx: Parameters<typeof getCurrentUser>[0]) => {
-  const user = await getCurrentUser(ctx);
-  if (!user) throw new Error("Please sign in.");
+/** Identity-validated admin gate shared by every admin function. */
+const requireAdmin = async (ctx: Parameters<typeof requireUser>[0]) => {
+  const user = await requireUser(ctx); // throws "Please sign in." when anonymous
   if (user.role !== "admin") throw new Error("Administrator access required.");
   return user;
 };
@@ -17,8 +18,7 @@ const requireAdmin = async (ctx: Parameters<typeof getCurrentUser>[0]) => {
 export const becomeAdmin = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in.");
+    const user = await requireUser(ctx);
     const existing = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("role"), "admin"))
@@ -31,7 +31,7 @@ export const becomeAdmin = mutation({
 });
 
 export const setUserRole = mutation({
-  args: { userId: v.id("users"), role: v.union(v.literal("admin"), v.literal("user")) },
+  args: { userId: v.id("users"), role: roleValidator },
   handler: async (ctx, { userId, role }) => {
     await requireAdmin(ctx);
     await ctx.db.patch(userId, { role });

@@ -3,14 +3,24 @@ import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 
 // default user roles. can add / remove based on the project as needed
+//
+// Sawaari RBAC: every signed-in user is either a `rider`, a `driver`, or an
+// `admin` (plus legacy `user`/`member` values kept for migration safety).
+// The role is granted on onboarding — `drivers.saveProfile` upgrades a user
+// to `driver` and the first ride booking grants `rider` — and it gates which
+// dashboards and backend functions a session may touch.
 export const ROLES = {
   ADMIN: "admin",
+  RIDER: "rider",
+  DRIVER: "driver",
   USER: "user",
   MEMBER: "member",
 } as const;
 
 export const roleValidator = v.union(
   v.literal(ROLES.ADMIN),
+  v.literal(ROLES.RIDER),
+  v.literal(ROLES.DRIVER),
   v.literal(ROLES.USER),
   v.literal(ROLES.MEMBER),
 );
@@ -57,8 +67,16 @@ const schema = defineSchema(
       emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
 
+      // Phone-OTP accounts (Convex Auth Phone provider): the normalized
+      // E.164-ish number (91XXXXXXXXXX) is the account identifier and is
+      // verified when the user signs in with an SMS code.
+      phoneNumber: v.optional(v.string()),
+      phoneNumberVerificationTime: v.optional(v.number()),
+
       role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    })
+      .index("email", ["email"]) // index for the email. do not remove or modify
+      .index("phone", ["phoneNumber"]),
 
     // A ride connects a rider and a driver through its lifecycle.
     // Convex queries over this table are live WebSocket subscriptions, so a
@@ -216,6 +234,17 @@ const schema = defineSchema(
       salt: v.string(),
       expiresAt: v.number(),
       attempts: v.number(),
+      createdAt: v.number(),
+    }).index("by_phone", ["phone"]),
+
+    // DEMO ONLY — plaintext SMS codes parked here when no Vonage credentials
+    // are configured, so the dev preview can surface the code on screen (no
+    // SMS is actually sent). Never written when VONAGE_API_KEY / _SECRET are
+    // set, and the demoCode query refuses to read it in production mode.
+    demoOtps: defineTable({
+      phone: v.string(),
+      code: v.string(),
+      expiresAt: v.number(),
       createdAt: v.number(),
     }).index("by_phone", ["phone"]),
   },

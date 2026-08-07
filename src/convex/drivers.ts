@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./users";
+import { getCurrentUser, requireRole, requireUser } from "./users";
 import { isValidIndianPhone, normalizeIndianPhone } from "./phone";
 
 export const GOTEGAON = {
@@ -62,6 +62,13 @@ export const saveProfile = mutation({
       .first();
 
     const now = Date.now();
+    // RBAC: creating a driver profile is the driver on-ramp — it grants the
+    // `driver` role that gates every driver-only function and the /app/driver
+    // dashboard. Never demote an admin who manages their own vehicle.
+    if (user.role !== "driver" && user.role !== "admin") {
+      await ctx.db.patch(user._id, { role: "driver" });
+    }
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         name: cleanName,
@@ -88,13 +95,14 @@ export const saveProfile = mutation({
 export const setOnline = mutation({
   args: { online: v.boolean() },
   handler: async (ctx, { online }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) throw new Error("Please sign in.");
+    const user = await requireUser(ctx);
     const driver = await ctx.db
       .query("drivers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
     if (!driver) throw new Error("Create a driver profile first.");
+    // RBAC: going on/off duty is a driver-only action.
+    await requireRole(ctx, "driver", "Driver access required.");
     await ctx.db.patch(driver._id, { online, lastSeen: Date.now() });
   },
 });
@@ -103,13 +111,15 @@ export const setOnline = mutation({
 export const updateLocation = mutation({
   args: { lat: v.number(), lng: v.number() },
   handler: async (ctx, { lat, lng }) => {
-    const user = await getCurrentUser(ctx);
-    if (!user) return;
+    const user = await requireUser(ctx);
     const driver = await ctx.db
       .query("drivers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
+    // Non-drivers are silently ignored (the rider app never streams this).
     if (!driver) return;
+    // RBAC: only a driver may move their vehicle.
+    await requireRole(ctx, "driver", "Driver access required.");
     await ctx.db.patch(driver._id, {
       location: { address: driver.location.address, lat, lng },
       lastSeen: Date.now(),

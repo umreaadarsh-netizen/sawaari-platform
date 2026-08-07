@@ -1,6 +1,7 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { RequireRole } from "@/components/RequireRole";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -149,7 +150,9 @@ createRoot(document.getElementById("root")!).render(
                 path="/app/driver"
                 element={
                   <RequireAuth>
-                    <DriverDashboard />
+                    <RequireRole role="driver" fallback="/app/rider">
+                      <DriverDashboard />
+                    </RequireRole>
                   </RequireAuth>
                 }
               />
@@ -157,7 +160,9 @@ createRoot(document.getElementById("root")!).render(
                 path="/app/admin"
                 element={
                   <RequireAuth>
-                    <AdminDashboard />
+                    <RequireRole role="admin" fallback="/app/rider">
+                      <AdminDashboard />
+                    </RequireRole>
                   </RequireAuth>
                 }
               />
