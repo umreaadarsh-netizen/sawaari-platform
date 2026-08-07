@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import { expect, test } from "vitest";
 import schema from "./convex/schema";
 import { api } from "./convex/_generated/api";
+import { MATCHING_RADIUS_KM, haversineKm } from "./convex/rides";
 import type { Id } from "./convex/_generated/dataModel";
 
 /**
@@ -120,6 +121,24 @@ async function completeRide(
   });
 
   return rideId;
+}
+
+/**
+ * Latitude offset (degrees) for a pure-meridian walk from (lat, lng) that
+ * makes the real haversine distance to (lat, lng) land at-or-below `km` —
+ * i.e. the closest representable point on the "in" side of the boundary.
+ * Binary search keeps this coupled to the production haversine (the exact
+ * math `openRides` runs) instead of a hand-computed approximation.
+ */
+function meridianOffset(lat: number, lng: number, km: number): number {
+  let lo = 0;
+  let hi = 0.1; // 0.1° ≈ 11.1 km — comfortably beyond any radius we probe
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (haversineKm(lat + mid, lng, lat, lng) <= km) lo = mid;
+    else hi = mid;
+  }
+  return lo;
 }
 
 test("full lifecycle: book → match → OTP start → complete → pay → rate", async () => {
@@ -538,6 +557,75 @@ test("a driver outside the 5 km matching radius never sees the request", async (
   ).rejects.toThrow("This pickup is outside your 5 km matching radius.");
 
   // The in-radius driver accepts normally.
+  await driver.mutation(api.rides.acceptRide, { rideId });
+  const matched = await rider.query(api.rides.getRide, { rideId });
+  expect(matched?.status).toBe("matched");
+  expect(matched?.driverId).toBe(driverId);
+});
+
+test("the 5 km matching radius is inclusive: 5.0 km is broadcast, 5.01 km is not", async () => {
+  const { t, rider, driver, driverId } = await setup();
+  await onboardDriver(driver);
+
+  // Park the first driver precisely ON the boundary: the largest latitude
+  // whose real haversine distance to the pickup is still ≤ 5 km — the
+  // closest representable point at-or-below the radius.
+  const insideLat =
+    PICKUP.lat + meridianOffset(PICKUP.lat, PICKUP.lng, MATCHING_RADIUS_KM);
+  await driver.mutation(api.drivers.updateLocation, {
+    lat: insideLat,
+    lng: PICKUP.lng,
+  });
+  const insideDist = haversineKm(insideLat, PICKUP.lng, PICKUP.lat, PICKUP.lng);
+  expect(insideDist).toBeLessThanOrEqual(MATCHING_RADIUS_KM);
+  expect(insideDist).toBeCloseTo(MATCHING_RADIUS_KM, 9); // 4.999999999999912
+
+  // A second, online driver at exactly 5.01 km — 10 m past the boundary.
+  const outsideLat = PICKUP.lat + meridianOffset(PICKUP.lat, PICKUP.lng, 5.01);
+  const outsideDist = haversineKm(outsideLat, PICKUP.lng, PICKUP.lat, PICKUP.lng);
+  expect(outsideDist).toBeGreaterThan(MATCHING_RADIUS_KM);
+  expect(outsideDist).toBeCloseTo(5.01, 9); // 5.00999999999986
+  const outsideId = await t.run(async (ctx) =>
+    ctx.db.insert("users", {
+      name: "Boundary Driver",
+      email: "boundary@example.com",
+      role: "user",
+    }),
+  );
+  const outside = t.withIdentity({
+    subject: `${outsideId}|boundary-session`,
+    name: "Boundary Driver",
+    email: "boundary@example.com",
+  });
+  await outside.mutation(api.drivers.saveProfile, {
+    name: "Boundary Driver",
+    vehicleNo: "MP42EV8888",
+  });
+  await outside.mutation(api.drivers.setOnline, { online: true });
+  await outside.mutation(api.drivers.updateLocation, {
+    lat: outsideLat,
+    lng: PICKUP.lng,
+  });
+
+  const rideId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+
+  // The boundary driver's feed carries the request — the radius check is
+  // `<=`, so a driver at precisely 5.0 km is broadcast to...
+  const boundaryFeed = await driver.query(api.rides.openRides, {});
+  expect(boundaryFeed.map((r) => r._id)).toContain(rideId);
+  // ...and the driver at 5.01 km is filtered out entirely.
+  const outsideFeed = await outside.query(api.rides.openRides, {});
+  expect(outsideFeed).toHaveLength(0);
+
+  // Acceptance mirrors the broadcast: 5.01 km is rejected at the gate,
+  // while the driver standing on the boundary accepts normally.
+  await expect(
+    outside.mutation(api.rides.acceptRide, { rideId }),
+  ).rejects.toThrow("This pickup is outside your 5 km matching radius.");
   await driver.mutation(api.rides.acceptRide, { rideId });
   const matched = await rider.query(api.rides.getRide, { rideId });
   expect(matched?.status).toBe("matched");
