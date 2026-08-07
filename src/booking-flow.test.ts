@@ -61,7 +61,7 @@ async function setup() {
     name: "Dev Driver",
     email: "dev@example.com",
   });
-  return { rider, driver, riderId, driverId };
+  return { t, rider, driver, riderId, driverId };
 }
 
 /** Create the driver profile, go online, and park next to the pickup. */
@@ -439,4 +439,107 @@ test("admin ledger: platform-retained totals balance against settled receipts", 
   expect(
     all.every((r) => r.pickupOtp === undefined && r.completionOtp === undefined),
   ).toBe(true);
+});
+
+test("an offline driver stops receiving ride broadcasts (and cannot accept)", async () => {
+  const { rider, driver } = await setup();
+  await onboardDriver(driver);
+
+  // Online and parked at the pickup → the first request reaches the driver.
+  const firstId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  const before = await driver.query(api.rides.openRides, {});
+  expect(before.map((r) => r._id)).toContain(firstId);
+
+  // Free the rider and take the driver offline — still parked at the pickup.
+  await rider.mutation(api.rides.cancelRide, { rideId: firstId });
+  await driver.mutation(api.drivers.setOnline, { online: false });
+  await driver.mutation(api.drivers.updateLocation, {
+    lat: PICKUP.lat,
+    lng: PICKUP.lng,
+  });
+
+  // A fresh request within the matching radius is broadcast to nobody:
+  // the offline driver's personal feed is empty, even though the pickup
+  // is physically right next to them.
+  const secondId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+  const offline = await driver.query(api.rides.openRides, {});
+  expect(offline).toHaveLength(0);
+  expect((await rider.query(api.rides.getRide, { rideId: secondId }))?.status).toBe(
+    "requested",
+  );
+
+  // Acceptance is locked while offline, before any radius check.
+  await expect(
+    driver.mutation(api.rides.acceptRide, { rideId: secondId }),
+  ).rejects.toThrow("Go online to accept rides.");
+
+  // Flipping back online resumes the broadcast for the same request.
+  await driver.mutation(api.drivers.setOnline, { online: true });
+  const back = await driver.query(api.rides.openRides, {});
+  expect(back.map((r) => r._id)).toContain(secondId);
+});
+
+test("a driver outside the 5 km matching radius never sees the request", async () => {
+  const { t, rider, driver, driverId } = await setup();
+  await onboardDriver(driver);
+  // Park the first driver ~4.45 km from the pickup — inside the radius.
+  await driver.mutation(api.drivers.updateLocation, {
+    lat: PICKUP.lat + 0.04,
+    lng: PICKUP.lng,
+  });
+
+  // A second, online driver ~6.67 km away — just outside the 5 km radius.
+  const farDriverId = await t.run(async (ctx) =>
+    ctx.db.insert("users", {
+      name: "Far Driver",
+      email: "far@example.com",
+      role: "user",
+    }),
+  );
+  const farDriver = t.withIdentity({
+    subject: `${farDriverId}|far-session`,
+    name: "Far Driver",
+    email: "far@example.com",
+  });
+  await farDriver.mutation(api.drivers.saveProfile, {
+    name: "Far Driver",
+    vehicleNo: "MP42EV9999",
+  });
+  await farDriver.mutation(api.drivers.setOnline, { online: true });
+  await farDriver.mutation(api.drivers.updateLocation, {
+    lat: PICKUP.lat + 0.06,
+    lng: PICKUP.lng,
+  });
+
+  const rideId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+
+  // The in-radius driver's broadcast carries the request; the far driver's
+  // personal feed is filtered out entirely.
+  const near = await driver.query(api.rides.openRides, {});
+  expect(near.map((r) => r._id)).toContain(rideId);
+  const far = await farDriver.query(api.rides.openRides, {});
+  expect(far).toHaveLength(0);
+
+  // Defense in depth: accepting outside the radius is rejected too.
+  await expect(
+    farDriver.mutation(api.rides.acceptRide, { rideId }),
+  ).rejects.toThrow("This pickup is outside your 5 km matching radius.");
+
+  // The in-radius driver accepts normally.
+  await driver.mutation(api.rides.acceptRide, { rideId });
+  const matched = await rider.query(api.rides.getRide, { rideId });
+  expect(matched?.status).toBe("matched");
+  expect(matched?.driverId).toBe(driverId);
 });
