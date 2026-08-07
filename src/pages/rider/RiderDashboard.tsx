@@ -1213,7 +1213,7 @@ function CheckoutCard({
     clientSecret: string;
     publishableKey: string | null;
   } | null>(null);
-  const [preparingCard, setPreparingCard] = useState(false);
+  const [stripeFailed, setStripeFailed] = useState(false);
 
   // When Card is selected, ask the server whether Stripe is wired up.
   useEffect(() => {
@@ -1233,32 +1233,39 @@ function CheckoutCard({
 
   // With Stripe live, mint a PaymentIntent for this exact fare the moment
   // the rider picks Card — the client secret powers the PaymentElement.
+  // "Preparing" is derived from state, so no synchronous setState in the
+  // effect body; failures are recorded so the rider can retry by toggling.
   useEffect(() => {
-    if (method !== "card" || stripeEnabled !== true || stripeIntent) return;
+    if (method !== "card" || stripeEnabled !== true) return;
+    if (stripeIntent || stripeFailed) return;
     let alive = true;
-    setPreparingCard(true);
     createPaymentIntent({ amount: ride.fare, purpose: "ride", rideId: ride._id })
       .then((res) => {
         if (!alive) return;
+        if (!res.clientSecret) {
+          toast.error("Secure checkout couldn't be prepared.");
+          setStripeFailed(true);
+          return;
+        }
         setStripeIntent({
           clientSecret: res.clientSecret,
           publishableKey: res.publishableKey,
         });
       })
       .catch((e) => {
-        if (alive) {
-          toast.error(
-            e instanceof Error ? e.message : "Couldn't start secure checkout.",
-          );
-        }
-      })
-      .finally(() => {
-        if (alive) setPreparingCard(false);
+        if (!alive) return;
+        toast.error(
+          e instanceof Error ? e.message : "Couldn't start secure checkout.",
+        );
+        setStripeFailed(true);
       });
     return () => {
       alive = false;
     };
-  }, [method, stripeEnabled, stripeIntent, createPaymentIntent, ride]);
+  }, [method, stripeEnabled, stripeIntent, stripeFailed, createPaymentIntent, ride]);
+
+  // Loading flag while the intent is being minted (derived, not stored).
+  const preparingCard = stripeEnabled === true && !stripeIntent && !stripeFailed;
 
   const rates = vehicle ?? vehicleById("classic");
   const baseShown = ride.fare >= rates.baseFare ? rates.baseFare : ride.fare;
@@ -1353,7 +1360,15 @@ function CheckoutCard({
             <button
               key={m.id}
               type="button"
-              onClick={() => setMethod(m.id)}
+              onClick={() => {
+                setMethod(m.id);
+                // Leaving Card clears a stale intent/failure so re-selecting
+                // Card starts a fresh secure-checkout attempt.
+                if (m.id !== "card") {
+                  setStripeIntent(null);
+                  setStripeFailed(false);
+                }
+              }}
               className={cn(
                 "rounded-xl border py-2.5 text-xs font-semibold transition-all",
                 method === m.id

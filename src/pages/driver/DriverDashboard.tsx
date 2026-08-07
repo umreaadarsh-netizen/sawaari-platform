@@ -675,7 +675,7 @@ export default function DriverDashboard() {
 
                   {(payouts ?? []).length > 0 && (
                     <div className="mt-3 space-y-1.5 border-t border-white/10 pt-3">
-                      {payouts.slice(0, 3).map((p) => (
+                      {(payouts ?? []).slice(0, 3).map((p) => (
                         <div
                           key={p._id}
                           className="flex items-center justify-between gap-2 text-[11px]"
