@@ -58,9 +58,9 @@ import {
 type Field = "pickup" | "dropoff";
 
 const STATUS_PILL: Record<string, { label: string; cls: string }> = {
-  requested: { label: "Matching driver", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
-  matched: { label: "Driver matched", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
-  arriving: { label: "Driver arrived", cls: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" },
+  requested: { label: "Matching driver", cls: "border-orange-400/30 bg-orange-400/10 text-orange-300" },
+  matched: { label: "Driver matched", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
+  arriving: { label: "Driver arrived", cls: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
   in_progress: { label: "On the move", cls: "border-sky-400/30 bg-sky-400/10 text-sky-300" },
   completed: { label: "Completed", cls: "border-white/15 bg-white/5 text-slate-300" },
 };
@@ -379,19 +379,19 @@ export default function RiderDashboard() {
 
           <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap items-center justify-center gap-2 px-3">
             {ride && approachRoute && (
-              <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-amber-300 backdrop-blur-xl">
+              <span className="flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-orange-300 backdrop-blur-xl">
                 <Navigation className="size-3" />
                 Driver approaching pickup — live
               </span>
             )}
             {!ride && (
               <span className="rounded-full border border-white/15 bg-slate-950/70 px-3 py-1.5 text-[11px] font-medium text-slate-300 backdrop-blur-xl">
-                <MapPin className="mr-1 inline size-3 text-emerald-300" />
+                <MapPin className="mr-1 inline size-3 text-amber-300" />
                 Tap the map to set a location
               </span>
             )}
             {!ride && farePreview && (
-              <span className="rounded-full border border-emerald-400/30 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 backdrop-blur-xl">
+              <span className="rounded-full border border-amber-400/30 bg-slate-950/75 px-3 py-1.5 text-[11px] font-semibold text-amber-300 backdrop-blur-xl">
                 {formatINR(farePreview.fare)} · {formatKm(farePreview.dist)} · ~
                 {farePreview.eta} min
               </span>
@@ -447,7 +447,7 @@ export default function RiderDashboard() {
                       className={cn(
                         "flex-1 rounded-full px-3 py-2 text-xs font-semibold transition-all",
                         panelTab === t.id
-                          ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                          ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                           : "text-slate-400 hover:text-slate-200",
                       )}
                     >
@@ -585,14 +585,14 @@ function BookingView(props: {
               className={cn(
                 "min-w-[132px] rounded-2xl border p-3 text-left transition-all",
                 vehicleId === v.id
-                  ? "border-emerald-400/50 bg-emerald-400/10 ring-2 ring-emerald-400/20"
+                  ? "border-amber-400/50 bg-amber-400/10 ring-2 ring-amber-400/20"
                   : "border-white/10 bg-white/5 hover:border-white/20",
               )}
             >
               <p className="text-sm font-semibold text-white">
                 {v.name.replace("Sawaari ", "")}
               </p>
-              <p className="mt-0.5 text-[11px] font-medium text-emerald-300">
+              <p className="mt-0.5 text-[11px] font-medium text-amber-300">
                 ₹{v.baseFare} + ₹{v.perKm}/km
               </p>
               <p className="mt-0.5 text-[10px] text-slate-500">{v.seats} seats</p>
@@ -605,7 +605,7 @@ function BookingView(props: {
       <div className="relative">
         <LocationInput
           label="Pickup"
-          icon={<MapPin className="size-4 text-emerald-300" />}
+          icon={<MapPin className="size-4 text-amber-300" />}
           value={pickupText}
           placeholder="Search pickup point…"
           active={activeField === "pickup"}
@@ -620,8 +620,8 @@ function BookingView(props: {
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-all disabled:opacity-60",
                 locating
-                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
-                  : "border-emerald-400/25 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20",
+                  ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+                  : "border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20",
               )}
               title="Detect current location via GPS"
             >
@@ -672,7 +672,7 @@ function BookingView(props: {
                 className={cn(
                   "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all",
                   scheduleMode === m
-                    ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                    ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                     : "text-slate-400 hover:text-slate-200",
                 )}
               >
@@ -687,13 +687,13 @@ function BookingView(props: {
               min={minTime}
               max={maxTime}
               onChange={(e) => props.onScheduledValue(e.target.value)}
-              className="h-9 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-slate-200 [color-scheme:dark] focus:border-emerald-400/50 focus:outline-none"
+              className="h-9 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-xs text-slate-200 [color-scheme:dark] focus:border-amber-400/50 focus:outline-none"
             />
           )}
         </div>
         {scheduleMode === "later" && (
           <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-            <CalendarClock className="size-3 text-emerald-300" />
+            <CalendarClock className="size-3 text-amber-300" />
             A driver is confirmed ahead of your scheduled pickup.
           </p>
         )}
@@ -701,10 +701,10 @@ function BookingView(props: {
 
       {/* live fare calculator */}
       {farePreview ? (
-        <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/10 to-teal-400/5 p-4">
+        <div className="rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-orange-400/5 p-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
                 Fare calculator · {selectedVehicle.name}
               </p>
               <p className="mt-1 font-display text-3xl font-semibold text-white">
@@ -743,19 +743,19 @@ function BookingView(props: {
             )}
             <div className="flex justify-between border-t border-white/10 pt-1.5 font-semibold text-white">
               <span>Total</span>
-              <span className="text-emerald-300">{formatINR(farePreview.fare)}</span>
+              <span className="text-amber-300">{formatINR(farePreview.fare)}</span>
             </div>
           </div>
 
           <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-            <Sparkles className="size-3 text-emerald-300" /> All-electric fleet · no surge
+            <Sparkles className="size-3 text-amber-300" /> All-electric fleet · no surge
             pricing — the fare you see is final
           </p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs text-slate-500">
           Set a pickup and drop-off to calculate your fare —{" "}
-          <span className="text-emerald-300">or tap the map</span>
+          <span className="text-amber-300">or tap the map</span>
         </div>
       )}
 
@@ -765,7 +765,7 @@ function BookingView(props: {
           size="lg"
           disabled={!farePreview || requesting}
           onClick={props.onRequest}
-          className="w-full bg-emerald-500 py-6 text-[15px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
+          className="w-full bg-amber-500 py-6 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400"
         >
           {requesting ? (
             <>
@@ -814,7 +814,7 @@ function LocationInput({
       className={cn(
         "flex items-center gap-2.5 rounded-xl border bg-white/5 px-3 transition-all",
         active
-          ? "border-emerald-400/50 ring-2 ring-emerald-400/20"
+          ? "border-amber-400/50 ring-2 ring-amber-400/20"
           : "border-white/10",
       )}
     >
@@ -857,9 +857,9 @@ function SuggestionList({
               e.preventDefault();
               onPickSuggestion(field, s);
             }}
-            className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-emerald-400/10"
+            className="flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-amber-400/10"
           >
-            <Search className="mt-0.5 size-3.5 shrink-0 text-emerald-300" />
+            <Search className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
             <span className="min-w-0">
               <span className="block truncate text-[13px] font-medium text-slate-100">
                 {s.label}
@@ -932,7 +932,7 @@ function RideView({
             {vehicle ? (
               <>
                 {vehicle.name} ·{" "}
-                <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+                <span className="text-amber-300">{formatINR(ride.fare)}</span>
               </>
             ) : (
               "Live booking"
@@ -956,8 +956,8 @@ function RideView({
       {/* Ride-lifecycle codes: shown only on the rider's screen, shared with
           the driver in person — pickup code to start, completion code to close. */}
       {!completed && ride.pickupOtp && ["matched", "arriving"].includes(ride.status) && (
-        <div className="rounded-2xl border border-dashed border-emerald-400/40 bg-emerald-400/5 p-4 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+        <div className="rounded-2xl border border-dashed border-amber-400/40 bg-amber-400/5 p-4 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
             <KeyRound className="size-3.5" /> Pickup code — show your driver
           </p>
           <p className="mt-2 font-mono text-4xl font-bold tracking-[0.3em] text-white">
@@ -972,8 +972,8 @@ function RideView({
       )}
 
       {!completed && ride.status === "in_progress" && ride.completionOtp && (
-        <div className="rounded-2xl border border-dashed border-amber-400/40 bg-amber-400/5 p-4 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+        <div className="rounded-2xl border border-dashed border-orange-400/40 bg-orange-400/5 p-4 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300">
             <KeyRound className="size-3.5" /> Completion code — share at drop-off
           </p>
           <p className="mt-2 font-mono text-4xl font-bold tracking-[0.3em] text-white">
@@ -989,9 +989,9 @@ function RideView({
       {searching ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
           <span className="relative grid size-20 place-items-center">
-            <span className="absolute inset-0 animate-ping rounded-full border border-emerald-400/40" />
-            <span className="absolute inset-3 animate-ping rounded-full border border-emerald-400/30 [animation-delay:400ms]" />
-            <span className="relative grid size-14 place-items-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40">
+            <span className="absolute inset-0 animate-ping rounded-full border border-amber-400/40" />
+            <span className="absolute inset-3 animate-ping rounded-full border border-amber-400/30 [animation-delay:400ms]" />
+            <span className="relative grid size-14 place-items-center rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/40">
               <Radar className="size-7 animate-pulse" />
             </span>
           </span>
@@ -1016,8 +1016,8 @@ function RideView({
         <>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="flex items-center gap-3">
-              <Avatar className="size-12 ring-2 ring-emerald-400/40">
-                <AvatarFallback className="bg-emerald-400/15 text-base font-bold text-emerald-300">
+              <Avatar className="size-12 ring-2 ring-amber-400/40">
+                <AvatarFallback className="bg-amber-400/15 text-base font-bold text-amber-300">
                   {driverInfo?.name.slice(0, 1) ?? "D"}
                 </AvatarFallback>
               </Avatar>
@@ -1030,15 +1030,15 @@ function RideView({
                   </span>
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                  <CarFront className="size-3.5 text-emerald-300" />
+                  <CarFront className="size-3.5 text-amber-300" />
                   {driverInfo?.vehicleNo ?? "EV rickshaw"} ·{" "}
-                  <Zap className="size-3 text-emerald-300" /> electric
+                  <Zap className="size-3 text-amber-300" /> electric
                 </p>
               </div>
-              <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+              <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-[10px] font-semibold text-amber-300">
                 <span className="relative flex size-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-amber-400" />
                 </span>
                 LIVE
               </span>
@@ -1057,7 +1057,7 @@ function RideView({
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                   Fare
                 </p>
-                <p className="mt-0.5 text-xs font-semibold text-emerald-300">
+                <p className="mt-0.5 text-xs font-semibold text-amber-300">
                   {formatINR(ride.fare)} · {formatKm(ride.distanceKm)}
                 </p>
               </div>
@@ -1065,7 +1065,7 @@ function RideView({
 
             {driverInfo && (
               <p className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
-                <Clock className="size-3.5 text-emerald-300" /> {driverInfo.msg}
+                <Clock className="size-3.5 text-amber-300" /> {driverInfo.msg}
               </p>
             )}
 
@@ -1086,7 +1086,7 @@ function RideView({
                 className={cn(
                   "mt-3 flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-[13px] font-semibold transition-all",
                   waHref
-                    ? "bg-[#25D366] text-emerald-950 shadow-lg shadow-[#25D366]/20 hover:brightness-110"
+                    ? "bg-[#25D366] text-amber-950 shadow-lg shadow-[#25D366]/20 hover:brightness-110"
                     : "cursor-not-allowed bg-white/10 text-slate-400",
                 )}
               >
@@ -1101,9 +1101,9 @@ function RideView({
               <button
                 type="button"
                 onClick={() => setChatOpen(!chatOpen)}
-                className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-emerald-300"
+                className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-amber-300"
               >
-                <MessageSquare className="size-4 text-emerald-300" />
+                <MessageSquare className="size-4 text-amber-300" />
                 Message your driver
               </button>
             </div>
@@ -1173,7 +1173,7 @@ function SystemQr({ size = 148 }: { size?: number }) {
       height={size}
       viewBox="0 0 25 25"
       shapeRendering="crispEdges"
-      className="rounded-xl border border-emerald-400/30 bg-white p-1 shadow-lg shadow-emerald-500/10"
+      className="rounded-xl border border-amber-400/30 bg-white p-1 shadow-lg shadow-amber-500/10"
       role="img"
       aria-label="SAWAARI system QR code"
     >
@@ -1288,8 +1288,8 @@ function CheckoutCard({
 
   if (ride.paid) {
     return (
-      <div className="flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-6">
-        <span className="grid size-14 place-items-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/40">
+      <div className="flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-6">
+        <span className="grid size-14 place-items-center rounded-full bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/40">
           <CheckCircle2 className="size-7" />
         </span>
         <div>
@@ -1302,7 +1302,7 @@ function CheckoutCard({
         <div className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-xs">
           <div className="flex justify-between text-slate-400">
             <span>Receipt</span>
-            <span className="font-mono font-semibold text-emerald-300">{receiptId}</span>
+            <span className="font-mono font-semibold text-amber-300">{receiptId}</span>
           </div>
           <div className="mt-2 flex justify-between text-slate-400">
             <span>Base fare · {rates.name}</span>
@@ -1314,7 +1314,7 @@ function CheckoutCard({
           </div>
           <div className="mt-2 flex justify-between border-t border-white/10 pt-2 text-sm font-semibold text-white">
             <span>Total paid</span>
-            <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+            <span className="text-amber-300">{formatINR(ride.fare)}</span>
           </div>
         </div>
         <p className="text-center text-[11px] text-slate-500">
@@ -1347,7 +1347,7 @@ function CheckoutCard({
           )}
         <div className="flex justify-between border-t border-white/10 pt-2 text-sm font-semibold text-white">
           <span>Total</span>
-          <span className="text-emerald-300">{formatINR(ride.fare)}</span>
+          <span className="text-amber-300">{formatINR(ride.fare)}</span>
         </div>
       </div>
 
@@ -1372,7 +1372,7 @@ function CheckoutCard({
               className={cn(
                 "rounded-xl border py-2.5 text-xs font-semibold transition-all",
                 method === m.id
-                  ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-300"
+                  ? "border-amber-400/50 bg-amber-400/10 text-amber-300"
                   : "border-white/10 bg-white/5 text-slate-400 hover:text-slate-200",
               )}
             >
@@ -1383,16 +1383,16 @@ function CheckoutCard({
       </div>
 
       {method === "qr" && (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-4">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
           <SystemQr />
           <div className="text-center">
             <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-white">
-              <QrCode className="size-3.5 text-emerald-300" />
+              <QrCode className="size-3.5 text-amber-300" />
               Scan with any UPI app
             </p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
               Pay{" "}
-              <span className="font-semibold text-emerald-300">
+              <span className="font-semibold text-amber-300">
                 {formatINR(ride.fare)}
               </span>{" "}
               to SAWAARI's system QR — UPI ID{" "}
@@ -1418,14 +1418,14 @@ function CheckoutCard({
           />
         ) : (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/50 p-4 text-xs text-slate-400">
-            <Loader2 className="size-4 animate-spin text-emerald-300" />
+            <Loader2 className="size-4 animate-spin text-amber-300" />
             {preparingCard
               ? "Preparing secure checkout…"
               : "Secure checkout unavailable — try UPI or cash."}
           </div>
         ))}
       {method === "card" && stripeEnabled === false && (
-        <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
+        <p className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-3 py-2.5 text-[11px] leading-relaxed text-orange-200/80">
           Stripe isn&apos;t configured in this preview — the fare will be
           captured as a test card payment instead.
         </p>
@@ -1436,7 +1436,7 @@ function CheckoutCard({
           type="button"
           onClick={() => void handlePay()}
           disabled={paying}
-          className="mt-auto w-full bg-emerald-500 py-5 text-[15px] font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400"
+          className="mt-auto w-full bg-amber-500 py-5 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400"
         >
           {paying ? (
             <>
@@ -1498,7 +1498,7 @@ function RateDriverModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/95 p-6 shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300">
             Trip feedback
           </p>
           <button

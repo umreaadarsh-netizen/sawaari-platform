@@ -36,21 +36,21 @@ export function StatusTimeline({ status }: { status: RideStatus }) {
               <span
                 className={cn(
                   "h-px flex-1",
-                  i === 0 ? "bg-transparent" : done ? "bg-emerald-400/70" : "bg-white/10",
+                  i === 0 ? "bg-transparent" : done ? "bg-amber-400/70" : "bg-white/10",
                 )}
               />
               <span
                 className={cn(
                   "relative grid size-9 shrink-0 place-items-center rounded-full border transition-all duration-500",
                   done
-                    ? "border-emerald-400/50 bg-emerald-400/15 text-emerald-300"
+                    ? "border-amber-400/50 bg-amber-400/15 text-amber-300"
                     : current
-                      ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-300"
+                      ? "border-amber-400/60 bg-amber-400/10 text-amber-300"
                       : "border-white/10 bg-white/5 text-slate-500",
                 )}
               >
                 {current && (
-                  <span className="absolute inset-0 animate-ping rounded-full border border-emerald-400/50" />
+                  <span className="absolute inset-0 animate-ping rounded-full border border-amber-400/50" />
                 )}
                 {done ? <Check className="size-4" /> : <Icon className="size-4" />}
               </span>
@@ -60,7 +60,7 @@ export function StatusTimeline({ status }: { status: RideStatus }) {
                   i === STEPS.length - 1
                     ? "bg-transparent"
                     : done
-                      ? "bg-emerald-400/70"
+                      ? "bg-amber-400/70"
                       : "bg-white/10",
                 )}
               />

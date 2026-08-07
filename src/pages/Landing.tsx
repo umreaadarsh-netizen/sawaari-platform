@@ -51,10 +51,10 @@ export default function Landing() {
     <div className="relative min-h-dvh overflow-x-clip bg-black text-slate-100">
       {/* ambient background */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-44 left-1/2 h-[540px] w-[860px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[150px]" />
-        <div className="absolute top-1/3 -left-44 h-[440px] w-[440px] rounded-full bg-teal-500/[0.07] blur-[130px]" />
-        <div className="absolute -right-36 top-1/4 h-[400px] w-[400px] rounded-full bg-emerald-600/[0.08] blur-[130px]" />
-        <div className="absolute bottom-0 left-1/3 h-[320px] w-[520px] rounded-full bg-teal-600/[0.07] blur-[130px]" />
+        <div className="absolute -top-44 left-1/2 h-[540px] w-[860px] -translate-x-1/2 rounded-full bg-amber-500/10 blur-[150px]" />
+        <div className="absolute top-1/3 -left-44 h-[440px] w-[440px] rounded-full bg-orange-500/[0.07] blur-[130px]" />
+        <div className="absolute -right-36 top-1/4 h-[400px] w-[400px] rounded-full bg-amber-600/[0.08] blur-[130px]" />
+        <div className="absolute bottom-0 left-1/3 h-[320px] w-[520px] rounded-full bg-orange-600/[0.07] blur-[130px]" />
         <div className="grain absolute inset-0" />
       </div>
 
@@ -282,7 +282,7 @@ function LocalRoutes() {
   return (
     <section id="routes" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           Gotegaon routes
         </p>
         <h2 className="mt-6 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -302,7 +302,7 @@ function LocalRoutes() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search routes — village, market, town…"
-            className="h-12 w-full rounded-full border border-transparent bg-transparent pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400/40 focus:outline-none"
+            className="h-12 w-full rounded-full border border-transparent bg-transparent pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-400/40 focus:outline-none"
           />
         </div>
       </motion.div>
@@ -328,22 +328,22 @@ function LocalRoutes() {
                 className={cn(
                   "liquid-glass border border-white/20 group relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-300",
                   active
-                    ? "border-emerald-300/45 bg-emerald-400/5 ring-1 ring-emerald-300/20"
-                    : "hover:-translate-y-0.5 hover:border-emerald-300/25",
+                    ? "border-amber-300/45 bg-amber-400/5 ring-1 ring-amber-300/20"
+                    : "hover:-translate-y-0.5 hover:border-amber-300/25",
                 )}
               >
                 <div
                   className={cn(
-                    "absolute -right-10 -top-10 size-28 rounded-full bg-emerald-400/10 blur-2xl transition-opacity",
+                    "absolute -right-10 -top-10 size-28 rounded-full bg-amber-400/10 blur-2xl transition-opacity",
                     active ? "opacity-100" : "opacity-0 group-hover:opacity-100",
                   )}
                 />
                 <div className="flex items-start justify-between gap-2">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
                     <MapPin className="size-3.5" /> {r.from}
                   </p>
                   {active && (
-                    <span className="glass-chip rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                    <span className="glass-chip rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
                       Selected
                     </span>
                   )}
@@ -363,8 +363,8 @@ function LocalRoutes() {
                     className={cn(
                       "grid size-9 place-items-center rounded-full transition-all",
                       active
-                        ? "bg-emerald-400/25 text-emerald-300"
-                        : "glass-chip text-emerald-300 group-hover:bg-emerald-400/20",
+                        ? "bg-amber-400/25 text-amber-300"
+                        : "glass-chip text-amber-300 group-hover:bg-amber-400/20",
                     )}
                   >
                     <ArrowUpRight className="size-4" />
@@ -380,10 +380,10 @@ function LocalRoutes() {
           {selected ? (
             <>
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
                   <span className="relative flex size-1.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-amber-400" />
                   </span>
                   Live fare preview
                 </p>
@@ -425,7 +425,7 @@ function LocalRoutes() {
                     className={cn(
                       "glass-chip rounded-full px-3.5 py-2 text-xs font-semibold transition-all",
                       v.id === vehicle.id
-                        ? "border-emerald-300/45 bg-emerald-400/15 text-emerald-300"
+                        ? "border-amber-300/45 bg-amber-400/15 text-amber-300"
                         : "text-slate-300 hover:bg-white/10 hover:text-white",
                     )}
                   >
@@ -453,7 +453,7 @@ function LocalRoutes() {
                 )}
                 <div className="flex items-end justify-between border-t border-white/10 pt-4">
                   <span className="text-sm font-semibold text-white">Estimated fare</span>
-                  <span className="font-serif text-4xl italic text-emerald-300">₹{fare}</span>
+                  <span className="font-serif text-4xl italic text-amber-300">₹{fare}</span>
                 </div>
               </div>
 
@@ -497,7 +497,7 @@ function Capabilities() {
   return (
     <section id="rides" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
           Capabilities
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -511,10 +511,10 @@ function Capabilities() {
             key={title}
             {...fadeUp}
             transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
+            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 hover:border-amber-300/30"
           >
-            <div className="absolute -right-14 -top-14 size-36 rounded-full bg-emerald-400/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-            <span className="glass-strong grid size-13 w-13 place-items-center rounded-2xl text-emerald-300 transition-transform duration-300 group-hover:scale-105">
+            <div className="absolute -right-14 -top-14 size-36 rounded-full bg-amber-400/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <span className="glass-strong grid size-13 w-13 place-items-center rounded-2xl text-amber-300 transition-transform duration-300 group-hover:scale-105">
               <Icon className="size-6" />
             </span>
             <h3 className="mt-6 font-serif text-2xl italic text-white">{title}</h3>
@@ -546,7 +546,7 @@ function FleetSection() {
   return (
     <section id="fleet" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
           The fleet
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -565,7 +565,7 @@ function FleetSection() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search the catalogue — comfort, luggage, seats…"
-            className="h-12 w-full rounded-full border border-transparent bg-transparent pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400/40 focus:outline-none"
+            className="h-12 w-full rounded-full border border-transparent bg-transparent pl-11 pr-4 text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-400/40 focus:outline-none"
           />
         </div>
       </motion.div>
@@ -581,10 +581,10 @@ function FleetSection() {
             key={v.id}
             {...fadeUp}
             transition={{ duration: 0.5, delay: i * 0.08 }}
-            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300/30"
+            className="liquid-glass border border-white/20 group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-amber-300/30"
           >
             <div className="flex items-start justify-between">
-              <span className="glass-strong grid size-12 place-items-center rounded-2xl text-emerald-300">
+              <span className="glass-strong grid size-12 place-items-center rounded-2xl text-amber-300">
                 <Zap className="size-5" />
               </span>
               <span className="glass-chip rounded-full px-2.5 py-1 text-[10px] font-semibold text-slate-300">
@@ -598,7 +598,7 @@ function FleetSection() {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                   Fare
                 </p>
-                <p className="font-serif text-2xl italic text-emerald-300">
+                <p className="font-serif text-2xl italic text-amber-300">
                   ₹{v.baseFare} <span className="text-sm text-slate-400">+ ₹{v.perKm}/km</span>
                 </p>
               </div>
@@ -644,7 +644,7 @@ function HowItWorks() {
   return (
     <section id="how" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
           How it works
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -663,13 +663,13 @@ function HowItWorks() {
             <span className="absolute right-6 top-4 font-serif text-6xl italic text-white/[0.06]">
               {step}
             </span>
-            <span className="glass-strong grid size-12 place-items-center rounded-2xl text-emerald-300">
+            <span className="glass-strong grid size-12 place-items-center rounded-2xl text-amber-300">
               <Icon className="size-5" />
             </span>
             <h3 className="mt-6 font-serif text-2xl italic text-white">{title}</h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">{body}</p>
             {i < steps.length - 1 && (
-              <ArrowUpRight className="absolute -right-2 top-1/2 hidden size-6 -translate-y-1/2 text-emerald-400/60 lg:block" />
+              <ArrowUpRight className="absolute -right-2 top-1/2 hidden size-6 -translate-y-1/2 text-amber-400/60 lg:block" />
             )}
           </motion.div>
         ))}
@@ -702,12 +702,12 @@ function DriverSection() {
     <section id="drivers" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div className="grid items-center gap-12 lg:grid-cols-2">
         <motion.div {...fadeUp}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
             For drivers
           </p>
           <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
             Own your earnings,{" "}
-            <span className="bg-gradient-to-r from-emerald-200 to-teal-200 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-transparent">
               drive electric
             </span>
           </h2>
@@ -721,9 +721,9 @@ function DriverSection() {
             {perks.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="liquid-glass border border-white/20 flex items-start gap-3.5 rounded-2xl p-4 transition-colors hover:border-emerald-300/25"
+                className="liquid-glass border border-white/20 flex items-start gap-3.5 rounded-2xl p-4 transition-colors hover:border-amber-300/25"
               >
-                <span className="glass-strong grid size-10 shrink-0 place-items-center rounded-xl text-emerald-300">
+                <span className="glass-strong grid size-10 shrink-0 place-items-center rounded-xl text-amber-300">
                   <Icon className="size-5" />
                 </span>
                 <div>
@@ -758,7 +758,7 @@ function DriverSection() {
                 </p>
                 <p className="mt-1 font-serif text-5xl italic text-white">₹28,400</p>
               </div>
-              <span className="glass-chip flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-emerald-300">
+              <span className="glass-chip flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-amber-300">
                 <Zap className="size-3.5" /> 62 rides
               </span>
             </div>
@@ -779,7 +779,7 @@ function DriverSection() {
                       whileInView={{ width: `${55 + i * 6}%` }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.8, delay: 0.2 + i * 0.08 }}
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400"
+                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400"
                     />
                   </div>
                   <span className="w-16 text-right text-xs font-semibold text-slate-300">
@@ -823,7 +823,7 @@ function Faq() {
   return (
     <section id="faq" className="relative mx-auto max-w-3xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
           FAQ
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -836,7 +836,7 @@ function Faq() {
             <AccordionItem
               key={item.q}
               value={item.q}
-              className="liquid-glass border border-white/20 rounded-2xl px-6 data-[state=open]:border-emerald-300/25"
+              className="liquid-glass border border-white/20 rounded-2xl px-6 data-[state=open]:border-amber-300/25"
             >
               <AccordionTrigger className="text-left text-sm font-semibold text-white hover:no-underline">
                 {item.q}
@@ -861,13 +861,13 @@ function FinalCta() {
         {...fadeUp}
         className="liquid-glass border border-white/20 relative overflow-hidden rounded-[2.5rem] p-10 text-center sm:p-14"
       >
-        <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[480px] -translate-x-1/2 rounded-full bg-emerald-400/20 blur-[100px]" />
-        <p className="glass-chip relative inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[480px] -translate-x-1/2 rounded-full bg-amber-400/20 blur-[100px]" />
+        <p className="glass-chip relative inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           Ready when you are
         </p>
         <h2 className="relative mx-auto mt-6 max-w-2xl font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
           Gotegaon moves quieter,{" "}
-          <span className="bg-gradient-to-r from-emerald-200 to-teal-200 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-transparent">
             cleaner and faster.
           </span>
         </h2>
@@ -915,7 +915,7 @@ function Footer() {
           </div>
         </div>
         <p className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
-          <span className="size-1 rounded-full bg-emerald-400" />
+          <span className="size-1 rounded-full bg-amber-400" />
           Connecting local routes across Madhya Pradesh
         </p>
         <p className="text-xs text-slate-500">

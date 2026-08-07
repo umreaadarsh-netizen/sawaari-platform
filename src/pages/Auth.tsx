@@ -315,12 +315,12 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       </svg>
 
       {/* horizon glow + grain */}
-      <div className="pointer-events-none absolute bottom-[-8%] left-1/2 h-72 w-[620px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[130px]" />
+      <div className="pointer-events-none absolute bottom-[-8%] left-1/2 h-72 w-[620px] -translate-x-1/2 rounded-full bg-amber-500/10 blur-[130px]" />
       <div className="grain pointer-events-none absolute inset-0" />
 
       {/* glass card */}
       <div className="relative w-full max-w-[430px]">
-        <div className="absolute -inset-1 -z-10 rounded-[2rem] bg-gradient-to-br from-emerald-400/20 via-transparent to-teal-400/20 blur-lg" />
+        <div className="absolute -inset-1 -z-10 rounded-[2rem] bg-gradient-to-br from-amber-400/20 via-transparent to-orange-400/20 blur-lg" />
         <div
           className="relative rounded-[2rem] bg-white/[0.055] p-7 sm:p-8"
           style={{
@@ -363,7 +363,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               className={cn(
                 "flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all",
                 method === "phone"
-                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                  ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                   : "text-slate-400 hover:text-slate-200",
               )}
             >
@@ -379,7 +379,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               className={cn(
                 "flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all",
                 method === "email"
-                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                  ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                   : "text-slate-400 hover:text-slate-200",
               )}
             >
@@ -411,7 +411,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           {method === "phone" && phoneStep === "input" && (
             <form onSubmit={sendPhoneOtp} className="mt-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-12 flex-1 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-emerald-400/40">
+                <div className="flex h-12 flex-1 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-amber-400/40">
                   <Phone className="size-4 shrink-0 text-slate-500" />
                   <span className="ml-2 text-sm font-semibold text-slate-300">+91</span>
                   <Input
@@ -453,7 +453,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             >
               {demoCode ? (
                 /* no Vonage credentials yet — surface the code for testing */
-                <div className="mx-auto rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-center text-xs text-emerald-200">
+                <div className="mx-auto rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-center text-xs text-amber-200">
                   Demo mode — your code is{" "}
                   <span className="font-mono text-sm font-bold tracking-[0.2em]">
                     {demoCode}
@@ -484,7 +484,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       <InputOTPSlot
                         key={index}
                         index={index}
-                        className="size-11 rounded-xl border-white/15 bg-white/[0.05] text-slate-100 data-[active=true]:border-emerald-400/50 data-[active=true]:ring-emerald-400/20"
+                        className="size-11 rounded-xl border-white/15 bg-white/[0.05] text-slate-100 data-[active=true]:border-amber-400/50 data-[active=true]:ring-amber-400/20"
                       />
                     ))}
                   </InputOTPGroup>
@@ -507,7 +507,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   <button
                     type="button"
                     onClick={resendCode}
-                    className="inline-flex items-center gap-1 font-semibold text-emerald-300 transition-colors hover:text-emerald-200"
+                    className="inline-flex items-center gap-1 font-semibold text-amber-300 transition-colors hover:text-amber-200"
                   >
                     <RefreshCw className="size-3" />
                     Resend code
@@ -517,7 +517,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
               <Button
                 type="submit"
-                className="mt-5 h-12 w-full rounded-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                className="mt-5 h-12 w-full rounded-full bg-amber-400 text-amber-950 hover:bg-amber-300"
                 disabled={isLoading || phoneOtp.length !== 6}
               >
                 {isLoading ? (
@@ -551,7 +551,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           {method === "email" && emailStep === "signIn" && (
             <form onSubmit={handleEmailSubmit} className="mt-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-12 flex-1 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-emerald-400/40">
+                <div className="flex h-12 flex-1 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-amber-400/40">
                   <Mail className="size-4 shrink-0 text-slate-500" />
                   <Input
                     name="email"
@@ -567,7 +567,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   variant="outline"
                   size="icon"
                   disabled={isLoading}
-                  className="glass-strong size-12 shrink-0 rounded-full text-emerald-300 hover:bg-white/15 hover:text-emerald-200"
+                  className="glass-strong size-12 shrink-0 rounded-full text-amber-300 hover:bg-white/15 hover:text-amber-200"
                 >
                   {isLoading ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -605,7 +605,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       <InputOTPSlot
                         key={index}
                         index={index}
-                        className="size-11 rounded-xl border-white/15 bg-white/[0.05] text-slate-100 data-[active=true]:border-emerald-400/50 data-[active=true]:ring-emerald-400/20"
+                        className="size-11 rounded-xl border-white/15 bg-white/[0.05] text-slate-100 data-[active=true]:border-amber-400/50 data-[active=true]:ring-amber-400/20"
                       />
                     ))}
                   </InputOTPGroup>
@@ -619,14 +619,14 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 <button
                   type="button"
                   onClick={() => setEmailStep("signIn")}
-                  className="font-semibold text-emerald-300 hover:text-emerald-200"
+                  className="font-semibold text-amber-300 hover:text-amber-200"
                 >
                   Try again
                 </button>
               </p>
               <Button
                 type="submit"
-                className="mt-5 h-12 w-full rounded-full bg-emerald-400 text-emerald-950 hover:bg-emerald-300"
+                className="mt-5 h-12 w-full rounded-full bg-amber-400 text-amber-950 hover:bg-amber-300"
                 disabled={isLoading || emailOtp.length !== 6}
               >
                 {isLoading ? (
@@ -670,7 +670,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 onClick={handleGuestLogin}
                 disabled={isLoading}
               >
-                <UserX className="mr-2 size-4 text-emerald-300" />
+                <UserX className="mr-2 size-4 text-amber-300" />
                 Continue as guest
               </Button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-500">
@@ -690,7 +690,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             href="https://freebuff.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-slate-400 underline underline-offset-2 transition-colors hover:text-emerald-300"
+            className="font-medium text-slate-400 underline underline-offset-2 transition-colors hover:text-amber-300"
           >
             freebuff.com
           </a>
@@ -720,7 +720,7 @@ function RoleCard({
       className={cn(
         "rounded-2xl border p-3.5 text-left transition-all",
         selected
-          ? "border-emerald-400/50 bg-emerald-400/10 ring-2 ring-emerald-400/20"
+          ? "border-amber-400/50 bg-amber-400/10 ring-2 ring-amber-400/20"
           : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]",
       )}
     >
@@ -728,7 +728,7 @@ function RoleCard({
         className={cn(
           "grid size-8 place-items-center rounded-lg",
           selected
-            ? "bg-emerald-400/20 text-emerald-300"
+            ? "bg-amber-400/20 text-amber-300"
             : "bg-white/5 text-slate-400",
         )}
       >

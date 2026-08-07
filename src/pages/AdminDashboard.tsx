@@ -47,9 +47,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_CLS: Record<string, string> = {
-  requested: "bg-amber-400/15 text-amber-300",
-  matched: "bg-emerald-400/15 text-emerald-300",
-  arriving: "bg-emerald-400/15 text-emerald-300",
+  requested: "bg-orange-400/15 text-orange-300",
+  matched: "bg-amber-400/15 text-amber-300",
+  arriving: "bg-amber-400/15 text-amber-300",
   in_progress: "bg-sky-400/15 text-sky-300",
   completed: "bg-white/10 text-slate-300",
   cancelled: "bg-rose-400/15 text-rose-300",
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
     return (
       <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#070b14]">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-[380px] w-[640px] -translate-x-1/2 rounded-full bg-emerald-500/15 blur-[130px]" />
+          <div className="absolute -top-32 left-1/2 h-[380px] w-[640px] -translate-x-1/2 rounded-full bg-amber-500/15 blur-[130px]" />
           <div className="grain absolute inset-0" />
         </div>
         <div className="relative flex items-center justify-between px-6 py-4">
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         </div>
         <div className="relative flex flex-1 items-center justify-center px-4 pb-16">
           <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl shadow-black/50 backdrop-blur-2xl">
-            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30">
+            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30">
               <ShieldCheck className="size-7" />
             </span>
             <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-white">
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
               type="button"
               onClick={() => void handleClaim()}
               disabled={claiming}
-              className="mt-6 w-full bg-emerald-400 py-6 text-[15px] font-semibold text-emerald-950 shadow-xl shadow-emerald-500/25 hover:bg-emerald-300"
+              className="mt-6 w-full bg-amber-400 py-6 text-[15px] font-semibold text-amber-950 shadow-xl shadow-amber-500/25 hover:bg-amber-300"
             >
               {claiming ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -164,7 +164,7 @@ function AdminWorkspace() {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
             Admin console
           </p>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-white">
@@ -183,12 +183,12 @@ function AdminWorkspace() {
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl"
             >
               <Icon
-                className={cn("size-4", accent ? "text-emerald-300" : "text-slate-500")}
+                className={cn("size-4", accent ? "text-amber-300" : "text-slate-500")}
               />
               <p
                 className={cn(
                   "mt-2 font-display text-xl font-semibold",
-                  accent ? "text-emerald-300" : "text-white",
+                  accent ? "text-amber-300" : "text-white",
                 )}
               >
                 {value}
@@ -213,8 +213,8 @@ function AdminWorkspace() {
               </span>
             </div>
             <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-white/10">
-              <div className="w-[75%] rounded-full bg-emerald-400/90" />
-              <div className="flex-1 rounded-full bg-emerald-400/25" />
+              <div className="w-[75%] rounded-full bg-amber-400/90" />
+              <div className="flex-1 rounded-full bg-amber-400/25" />
             </div>
             <div className="mt-2.5 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-3">
               <div className="rounded-lg bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
@@ -223,9 +223,9 @@ function AdminWorkspace() {
                   {formatINR(stats.faresCollected)}
                 </p>
               </div>
-              <div className="rounded-lg bg-emerald-400/5 px-3 py-2 ring-1 ring-emerald-400/15">
+              <div className="rounded-lg bg-amber-400/5 px-3 py-2 ring-1 ring-amber-400/15">
                 <p className="text-slate-400">Driver payouts · 75%</p>
-                <p className="mt-0.5 font-display text-base font-semibold text-emerald-300">
+                <p className="mt-0.5 font-display text-base font-semibold text-amber-300">
                   {formatINR(stats.driverPayouts)}
                 </p>
               </div>
@@ -241,16 +241,16 @@ function AdminWorkspace() {
 
         <Tabs defaultValue="bookings" className="mt-8">
           <TabsList className="border border-white/10 bg-white/5 text-slate-400">
-            <TabsTrigger value="bookings" className="data-[state=active]:bg-emerald-400/15 data-[state=active]:text-emerald-300">
+            <TabsTrigger value="bookings" className="data-[state=active]:bg-amber-400/15 data-[state=active]:text-amber-300">
               Bookings
             </TabsTrigger>
-            <TabsTrigger value="drivers" className="data-[state=active]:bg-emerald-400/15 data-[state=active]:text-emerald-300">
+            <TabsTrigger value="drivers" className="data-[state=active]:bg-amber-400/15 data-[state=active]:text-amber-300">
               Drivers
             </TabsTrigger>
-            <TabsTrigger value="fleet" className="data-[state=active]:bg-emerald-400/15 data-[state=active]:text-emerald-300">
+            <TabsTrigger value="fleet" className="data-[state=active]:bg-amber-400/15 data-[state=active]:text-amber-300">
               Fleet catalogue
             </TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-emerald-400/15 data-[state=active]:text-emerald-300">
+            <TabsTrigger value="customers" className="data-[state=active]:bg-amber-400/15 data-[state=active]:text-amber-300">
               Customers
             </TabsTrigger>
           </TabsList>
@@ -308,7 +308,7 @@ function BookingsTab({
             className={cn(
               "rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-all",
               filter === f
-                ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                 : "text-slate-400 hover:text-slate-200",
             )}
           >
@@ -344,7 +344,7 @@ function BookingsTab({
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                  r.paid ? "bg-emerald-400/15 text-emerald-300" : "bg-white/5 text-slate-500",
+                  r.paid ? "bg-amber-400/15 text-amber-300" : "bg-white/5 text-slate-500",
                 )}
               >
                 {r.paid ? "Paid" : "Due"}
@@ -388,7 +388,7 @@ function DriversTab() {
               className={cn(
                 "grid size-10 place-items-center rounded-full text-xs font-bold",
                 d.online
-                  ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                  ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                   : "bg-white/5 text-slate-400 ring-1 ring-white/10",
               )}
             >
@@ -401,7 +401,7 @@ function DriversTab() {
                   className={cn(
                     "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                     d.online
-                      ? "bg-emerald-400/15 text-emerald-300"
+                      ? "bg-amber-400/15 text-amber-300"
                       : "bg-white/5 text-slate-500",
                   )}
                 >
@@ -409,7 +409,7 @@ function DriversTab() {
                 </span>
               </p>
               <p className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
-                <Zap className="size-3 text-emerald-300" /> {d.vehicleNo} · EV rickshaw
+                <Zap className="size-3 text-amber-300" /> {d.vehicleNo} · EV rickshaw
               </p>
             </div>
             <div className="flex items-center gap-5 text-right">
@@ -442,7 +442,7 @@ function FleetTab() {
   return (
     <div className="space-y-3">
       <p className="flex items-center gap-2 text-xs text-slate-500">
-        <Wrench className="size-3.5 text-emerald-300" />
+        <Wrench className="size-3.5 text-amber-300" />
         Edits here override the built-in catalogue and apply to every customer
         booking immediately.
       </p>
@@ -514,7 +514,7 @@ function FleetRow({ vehicle }: { vehicle: FleetVehicle }) {
             size="sm"
             disabled={!dirty || saving}
             onClick={() => void handleSave()}
-            className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+            className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : "Save changes"}
           </Button>
@@ -577,7 +577,7 @@ function CustomersTab() {
               <p className="truncate text-sm font-medium text-slate-200">
                 {c.name ?? c.email ?? "Guest"}
                 {c._id === user?._id && (
-                  <span className="ml-2 text-[10px] font-semibold text-emerald-300">(you)</span>
+                  <span className="ml-2 text-[10px] font-semibold text-amber-300">(you)</span>
                 )}
               </p>
               <p className="truncate text-[11px] text-slate-500">

@@ -46,7 +46,7 @@ function CardForm({ amount, onSuccess }: { amount: number; onSuccess: () => void
       <Button
         type="submit"
         disabled={!stripe || !elements || paying || done}
-        className="w-full bg-emerald-500 py-4 text-sm font-semibold text-emerald-950 shadow-lg shadow-emerald-500/25 hover:bg-emerald-400 disabled:opacity-60"
+        className="w-full bg-amber-500 py-4 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400 disabled:opacity-60"
       >
         {done ? (
           <>
@@ -85,8 +85,8 @@ export function StripeCardPayment({
   if (!publishableKey) return null;
 
   return (
-    <div className="rounded-2xl border border-emerald-400/25 bg-slate-950/50 p-4">
-      <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300">
+    <div className="rounded-2xl border border-amber-400/25 bg-slate-950/50 p-4">
+      <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-300">
         <Lock className="size-3" /> Secure card checkout · Stripe
       </p>
       <Elements
@@ -95,7 +95,7 @@ export function StripeCardPayment({
           clientSecret,
           appearance: {
             theme: "night",
-            variables: { colorPrimary: "#34d399", borderRadius: "12px" },
+            variables: { colorPrimary: "#f59e0b", borderRadius: "12px" },
           },
         }}
       >

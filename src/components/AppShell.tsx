@@ -51,7 +51,7 @@ export function AppShell({
             "hidden rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider sm:inline-flex",
             mode === "admin"
               ? "border-sky-400/30 bg-sky-400/10 text-sky-300"
-              : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
+              : "border-amber-400/30 bg-amber-400/10 text-amber-300",
           )}
         >
           {mode} mode
@@ -61,10 +61,10 @@ export function AppShell({
       <div className="flex items-center gap-2.5">
         <span className="mr-1 hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-slate-300 md:inline-flex">
           <span className="relative flex size-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+            <span className="relative inline-flex size-2 rounded-full bg-amber-400" />
           </span>
-          <Wifi className="size-3 text-emerald-300" />
+          <Wifi className="size-3 text-amber-300" />
           Live · WebSocket
         </span>
 
@@ -79,7 +79,7 @@ export function AppShell({
                 mode === key
                   ? key === "admin"
                     ? "bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/30"
-                    : "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                    : "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                   : "text-slate-400 hover:text-slate-200",
               )}
             >
@@ -91,7 +91,7 @@ export function AppShell({
 
         <div className="flex items-center gap-2 border-l border-white/10 pl-3">
           <Avatar className="size-8 ring-1 ring-white/15">
-            <AvatarFallback className="bg-emerald-400/15 text-xs font-bold text-emerald-300">
+            <AvatarFallback className="bg-amber-400/15 text-xs font-bold text-amber-300">
               {initial}
             </AvatarFallback>
           </Avatar>

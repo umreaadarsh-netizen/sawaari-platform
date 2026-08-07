@@ -8,7 +8,7 @@ export function SawaariMark({
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 text-emerald-950 shadow-lg shadow-emerald-500/30 ring-1 ring-white/20",
+        "relative inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 text-amber-950 shadow-lg shadow-amber-500/30 ring-1 ring-white/20",
         className,
       )}
     >

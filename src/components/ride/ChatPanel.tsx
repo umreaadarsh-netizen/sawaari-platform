@@ -46,7 +46,7 @@ export function ChatPanel({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           In-ride chat
         </p>
-        <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-300">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-amber-300">
           <Zap className="size-3" /> live
         </span>
       </div>
@@ -66,12 +66,12 @@ export function ChatPanel({
                 className={cn(
                   "max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug",
                   mine
-                    ? "rounded-br-sm bg-emerald-400/20 text-emerald-50 ring-1 ring-emerald-400/25"
+                    ? "rounded-br-sm bg-amber-400/20 text-amber-50 ring-1 ring-amber-400/25"
                     : "rounded-bl-sm bg-white/8 text-slate-200 ring-1 ring-white/10",
                 )}
               >
                 {!mine && (
-                  <p className="mb-0.5 text-[10px] font-semibold text-emerald-300">
+                  <p className="mb-0.5 text-[10px] font-semibold text-amber-300">
                     {m.authorName}
                   </p>
                 )}
@@ -105,7 +105,7 @@ export function ChatPanel({
           size="icon"
           onClick={() => void handleSend()}
           disabled={!draft.trim() || sending}
-          className="shrink-0 bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+          className="shrink-0 bg-amber-500 text-amber-950 hover:bg-amber-400"
           aria-label="Send message"
         >
           <Send className="size-4" />

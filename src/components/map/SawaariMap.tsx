@@ -16,9 +16,9 @@ interface SawaariMapProps {
   center?: [number, number];
   zoom?: number;
   markers?: MapMarker[];
-  /** The trip route (e.g. pickup → drop-off). Drawn as the solid emerald line. */
+  /** The trip route (e.g. pickup → drop-off). Drawn as the solid amber line. */
   route?: [number, number][];
-  /** Live approach vector (e.g. driver → pickup). Drawn as the dashed amber line. */
+  /** Live approach vector (e.g. driver → pickup). Drawn as the dashed orange line. */
   approachRoute?: [number, number][];
   onMapClick?: (lat: number, lng: number) => void;
   className?: string;
@@ -146,14 +146,14 @@ export function SawaariMap({
     routeRef.current = [];
     if (route && route.length >= 2) {
       const casing = L.polyline(route, {
-        color: "#065f46",
+        color: "#b45309",
         weight: 9,
         opacity: 0.85,
         lineCap: "round",
         renderer: svgRenderer,
       }).addTo(map);
       const line = L.polyline(route, {
-        color: "#34d399",
+        color: "#f59e0b",
         weight: 4,
         opacity: 0.95,
         lineCap: "round",
@@ -171,7 +171,7 @@ export function SawaariMap({
     approachRef.current = [];
     if (approachRoute && approachRoute.length >= 2) {
       const casing = L.polyline(approachRoute, {
-        color: "#78350f",
+        color: "#c2410c",
         weight: 7,
         opacity: 0.7,
         dashArray: "1 10",
@@ -179,7 +179,7 @@ export function SawaariMap({
         renderer: svgRenderer,
       }).addTo(map);
       const line = L.polyline(approachRoute, {
-        color: "#fbbf24",
+        color: "#fb923c",
         weight: 3,
         opacity: 0.95,
         dashArray: "6 8",

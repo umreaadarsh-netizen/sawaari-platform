@@ -376,15 +376,15 @@ export default function DriverDashboard() {
               className={cn(
                 "rounded-full border px-3 py-1.5 text-[11px] font-semibold backdrop-blur-xl",
                 online
-                  ? "border-emerald-400/30 bg-slate-950/75 text-emerald-300"
+                  ? "border-amber-400/30 bg-slate-950/75 text-amber-300"
                   : "border-white/15 bg-slate-950/75 text-slate-400",
               )}
             >
               {online ? (
                 <>
                   <span className="relative mr-1.5 inline-flex size-1.5 align-middle">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-amber-400" />
                   </span>
                   Online · receiving requests
                 </>
@@ -399,9 +399,9 @@ export default function DriverDashboard() {
         <aside className="min-h-0 flex-1 overflow-y-auto border-t border-white/10 bg-slate-950/60 backdrop-blur-xl lg:order-1 lg:w-[400px] lg:flex-none lg:border-r lg:border-t-0 xl:w-[430px]">
           <div className="flex h-full flex-col gap-4 p-4 sm:p-5">
             {!myProfile ? (
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-5">
+              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-5">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-11 place-items-center rounded-xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30">
+                  <span className="grid size-11 place-items-center rounded-xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30">
                     <CarFront className="size-5" />
                   </span>
                   <div>
@@ -437,7 +437,7 @@ export default function DriverDashboard() {
                     type="button"
                     onClick={() => void handleSaveProfile()}
                     disabled={savingProfile || !form.name.trim() || !form.vehicleNo.trim()}
-                    className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                    className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
                   >
                     {savingProfile ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -452,15 +452,15 @@ export default function DriverDashboard() {
               <>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="size-11 ring-2 ring-emerald-400/40">
-                      <AvatarFallback className="bg-emerald-400/15 text-base font-bold text-emerald-300">
+                    <Avatar className="size-11 ring-2 ring-amber-400/40">
+                      <AvatarFallback className="bg-amber-400/15 text-base font-bold text-amber-300">
                         {initial}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                       <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                        <Zap className="size-3 text-emerald-300" />
+                        <Zap className="size-3 text-amber-300" />
                         {myProfile.vehicleNo} · EV rickshaw
                       </p>
                     </div>
@@ -468,7 +468,7 @@ export default function DriverDashboard() {
                       <span
                         className={cn(
                           "text-xs font-semibold",
-                          online ? "text-emerald-300" : "text-slate-500",
+                          online ? "text-amber-300" : "text-slate-500",
                         )}
                       >
                         {online ? "Online" : "Offline"}
@@ -505,7 +505,7 @@ export default function DriverDashboard() {
                           type="button"
                           onClick={() => void handleSavePhone()}
                           disabled={savingPhone}
-                          className="shrink-0 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold text-emerald-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
+                          className="shrink-0 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-bold text-amber-950 transition-colors hover:bg-amber-400 disabled:opacity-60"
                         >
                           {savingPhone ? (
                             <Loader2 className="size-3 animate-spin" />
@@ -517,7 +517,7 @@ export default function DriverDashboard() {
                     ) : (
                       <>
                         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-400">
-                          <MessageCircle className="size-3.5 shrink-0 text-emerald-300" />
+                          <MessageCircle className="size-3.5 shrink-0 text-amber-300" />
                           {myProfile.phone ? (
                             <span className="truncate font-semibold text-slate-200">
                               +91 {myProfile.phone.slice(2).replace(/(\d{5})(\d{5})/, "$1 $2")}
@@ -534,7 +534,7 @@ export default function DriverDashboard() {
                             setPhoneDraft(myProfile.phone ?? "");
                             setEditingPhone(true);
                           }}
-                          className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-emerald-300 transition-colors hover:text-emerald-200"
+                          className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-amber-300 transition-colors hover:text-amber-200"
                         >
                           <Pencil className="size-3" />
                           {myProfile.phone ? "Edit" : "Add"}
@@ -547,10 +547,10 @@ export default function DriverDashboard() {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                      <Wallet className="size-3.5 text-emerald-300" />
+                      <Wallet className="size-3.5 text-amber-300" />
                       Earnings wallet
                     </p>
-                    <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                    <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold text-amber-300">
                       75 / 25 split
                     </span>
                   </div>
@@ -562,11 +562,11 @@ export default function DriverDashboard() {
                     settled trip{(wallet?.settledRides ?? 0) === 1 ? "" : "s"}
                   </p>
                   <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-white/10">
-                    <div className="w-[75%] rounded-full bg-emerald-400" />
+                    <div className="w-[75%] rounded-full bg-amber-400" />
                     <div className="flex-1 rounded-full bg-white/15" />
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-                    <span className="font-semibold text-emerald-300">
+                    <span className="font-semibold text-amber-300">
                       You get 75% · {formatINR(wallet?.driverEarnings ?? 0)}
                     </span>
                     <span className="text-slate-500">
@@ -578,16 +578,16 @@ export default function DriverDashboard() {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                      <ArrowUpCircle className="size-3.5 text-emerald-300" />
+                      <ArrowUpCircle className="size-3.5 text-amber-300" />
                       Stripe payouts
                     </p>
                     <span
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-bold",
                         connect?.payoutsEnabled
-                          ? "bg-emerald-400/10 text-emerald-300"
+                          ? "bg-amber-400/10 text-amber-300"
                           : connect?.accountId
-                            ? "bg-amber-400/10 text-amber-300"
+                            ? "bg-orange-400/10 text-orange-300"
                             : "bg-white/5 text-slate-400",
                       )}
                     >
@@ -614,7 +614,7 @@ export default function DriverDashboard() {
                         {onboarding ? (
                           <Loader2 className="size-3.5 animate-spin" />
                         ) : (
-                          <ArrowUpCircle className="size-3.5 text-emerald-300" />
+                          <ArrowUpCircle className="size-3.5 text-amber-300" />
                         )}
                         {onboarding ? "Opening Stripe…" : "Connect with Stripe"}
                       </button>
@@ -629,7 +629,7 @@ export default function DriverDashboard() {
                         type="button"
                         onClick={() => void handleFinishOnboarding()}
                         disabled={onboarding}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400/15 px-4 py-3 text-xs font-semibold text-amber-300 ring-1 ring-amber-400/30 transition-colors hover:bg-amber-400/25 disabled:opacity-60"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-400/15 px-4 py-3 text-xs font-semibold text-orange-300 ring-1 ring-orange-400/30 transition-colors hover:bg-orange-400/25 disabled:opacity-60"
                       >
                         {onboarding ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -653,7 +653,7 @@ export default function DriverDashboard() {
                         disabled={
                           payoutBusy || (wallet?.driverEarnings ?? 0) < 50
                         }
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-xs font-bold text-emerald-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-xs font-bold text-amber-950 transition-colors hover:bg-amber-400 disabled:opacity-50"
                       >
                         {payoutBusy ? (
                           <>
@@ -690,9 +690,9 @@ export default function DriverDashboard() {
                             className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-bold",
                               p.status === "paid"
-                                ? "bg-emerald-400/10 text-emerald-300"
+                                ? "bg-amber-400/10 text-amber-300"
                                 : p.status === "pending"
-                                  ? "bg-amber-400/10 text-amber-300"
+                                  ? "bg-orange-400/10 text-orange-300"
                                   : "bg-rose-400/10 text-rose-300",
                             )}
                           >
@@ -759,11 +759,11 @@ export default function DriverDashboard() {
                 </div>
 
                 {justCompleted && (
-                  <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4">
-                    <CheckCircle2 className="size-6 shrink-0 text-emerald-300" />
+                  <div className="flex items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4">
+                    <CheckCircle2 className="size-6 shrink-0 text-amber-300" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white">Trip completed</p>
-                      <p className="text-[11px] text-emerald-300/90">
+                      <p className="text-[11px] text-amber-300/90">
                         You earned {formatINR(justCompleted.driverShare)} (75%) ·{" "}
                         {formatKm(justCompleted.distanceKm)} · platform fee{" "}
                         {formatINR(justCompleted.platformShare)} (25%)
@@ -786,7 +786,7 @@ export default function DriverDashboard() {
                       className={cn(
                         "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all",
                         panelTab === t.id
-                          ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30"
+                          ? "bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30"
                           : "text-slate-400 hover:text-slate-200",
                       )}
                     >
@@ -817,10 +817,10 @@ export default function DriverDashboard() {
                       <h2 className="font-display text-sm font-semibold text-white">
                         Live bookings
                       </h2>
-                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
                         <span className="relative flex size-1.5">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                          <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-70" />
+                          <span className="relative inline-flex size-1.5 rounded-full bg-amber-400" />
                         </span>
                         {openRequests?.length ?? 0} waiting
                       </span>
@@ -854,7 +854,7 @@ export default function DriverDashboard() {
                               className={cn(
                                 "w-full rounded-2xl border p-3.5 text-left transition-all",
                                 selected
-                                  ? "border-emerald-400/40 bg-emerald-400/10"
+                                  ? "border-amber-400/40 bg-amber-400/10"
                                   : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]",
                               )}
                             >
@@ -862,7 +862,7 @@ export default function DriverDashboard() {
                                 <p className="text-sm font-semibold text-white">
                                   {r.riderName}
                                 </p>
-                                <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">
+                                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
                                   {formatINR(r.fare)}
                                 </span>
                               </div>
@@ -871,7 +871,7 @@ export default function DriverDashboard() {
                                   {vehicleById(r.vehicleType).name}
                                 </span>
                                 {scheduled && (
-                                  <span className="flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                                  <span className="flex items-center gap-1 rounded-full border border-orange-400/25 bg-orange-400/10 px-2 py-0.5 text-[10px] font-semibold text-orange-300">
                                     <CalendarClock className="size-3" />
                                     {format(new Date(r.scheduledFor!), "h:mm a")}
                                   </span>
@@ -879,7 +879,7 @@ export default function DriverDashboard() {
                               </div>
                               <div className="mt-2.5 space-y-1.5 text-[12px]">
                                 <p className="flex items-start gap-2 text-slate-300">
-                                  <span className="mt-0.5 size-2 shrink-0 rounded-full bg-emerald-400" />
+                                  <span className="mt-0.5 size-2 shrink-0 rounded-full bg-amber-400" />
                                   <span className="truncate">{r.pickup.address}</span>
                                 </p>
                                 <p className="flex items-start gap-2 text-slate-300">
@@ -913,7 +913,7 @@ export default function DriverDashboard() {
                                       void handleAccept(r._id);
                                     }
                                   }}
-                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-emerald-950 transition-all hover:bg-emerald-400 active:scale-95"
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-amber-950 transition-all hover:bg-amber-400 active:scale-95"
                                 >
                                   Accept <ArrowUpCircle className="size-3.5 rotate-45" />
                                 </span>
@@ -937,7 +937,7 @@ export default function DriverDashboard() {
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="rounded-xl bg-slate-950/50 px-3 py-2.5 text-center ring-1 ring-white/5">
-      <p className={cn("font-display text-lg font-semibold", accent ? "text-emerald-300" : "text-white")}>
+      <p className={cn("font-display text-lg font-semibold", accent ? "text-amber-300" : "text-white")}>
         {value}
       </p>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
@@ -972,10 +972,10 @@ function DriverRideCard({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+      <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
               Active booking
             </p>
             <p className="mt-0.5 text-sm font-semibold text-white">
@@ -986,7 +986,7 @@ function DriverRideCard({
             className={cn(
               "flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
               ride.paid
-                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
                 : "border-white/15 bg-white/5 text-slate-400",
             )}
           >
@@ -1000,7 +1000,7 @@ function DriverRideCard({
           <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
             <div className="flex items-center justify-between gap-2 text-[11px]">
               <span className="text-slate-400">Your net earnings · 75%</span>
-              <span className="font-semibold text-emerald-300">
+              <span className="font-semibold text-amber-300">
                 {formatINR(split.driverShare)}
               </span>
             </div>
@@ -1011,7 +1011,7 @@ function DriverRideCard({
               </span>
             </div>
             <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="w-[75%] rounded-full bg-emerald-400/80" />
+              <div className="w-[75%] rounded-full bg-amber-400/80" />
               <div className="flex-1 rounded-full bg-white/15" />
             </div>
           </div>
@@ -1019,7 +1019,7 @@ function DriverRideCard({
 
         <div className="mt-3 space-y-1.5 text-[12px]">
           <p className="flex items-start gap-2 text-slate-300">
-            <span className="mt-0.5 size-2 shrink-0 rounded-full bg-emerald-400" />
+            <span className="mt-0.5 size-2 shrink-0 rounded-full bg-amber-400" />
             <span className="truncate">{ride.pickup.address}</span>
           </p>
           <p className="flex items-start gap-2 text-slate-300">
@@ -1029,7 +1029,7 @@ function DriverRideCard({
         </div>
 
         {scheduled && (
-          <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] font-semibold text-amber-300">
+          <p className="mt-3 flex items-center gap-1.5 rounded-lg border border-orange-400/25 bg-orange-400/10 px-3 py-2 text-[11px] font-semibold text-orange-300">
             <CalendarClock className="size-3.5" />
             Pickup scheduled for {format(new Date(ride.scheduledFor!), "h:mm a")} — you'll
             be notified when it's time to leave.
@@ -1041,14 +1041,14 @@ function DriverRideCard({
             <Button
               type="button"
               onClick={() => onStatus("arriving")}
-              className="w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+              className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
             >
               <Flag className="size-4" /> Arrived at pickup
             </Button>
           )}
           {ride.status === "arriving" && (
-            <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300">
+            <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-300">
                 <KeyRound className="size-3.5" /> Ask your customer for the pickup code
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">
@@ -1062,13 +1062,13 @@ function DriverRideCard({
                   placeholder="••••"
                   inputMode="numeric"
                   autoFocus
-                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-emerald-400/50 focus:outline-none"
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-amber-400/50 focus:outline-none"
                 />
                 <Button
                   type="button"
                   onClick={() => onStatus("in_progress", otp)}
                   disabled={otp.length !== 4}
-                  className="h-11 shrink-0 bg-emerald-500 px-4 text-emerald-950 hover:bg-emerald-400"
+                  className="h-11 shrink-0 bg-amber-500 px-4 text-amber-950 hover:bg-amber-400"
                 >
                   <Play className="size-4" /> Start trip
                 </Button>
@@ -1076,8 +1076,8 @@ function DriverRideCard({
             </div>
           )}
           {ride.status === "in_progress" && (
-            <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-300">
+            <div className="rounded-xl border border-orange-400/25 bg-orange-400/10 p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-300">
                 <KeyRound className="size-3.5" /> Ask your customer for the completion code
               </p>
               <p className="mt-0.5 text-[11px] text-slate-400">
@@ -1091,13 +1091,13 @@ function DriverRideCard({
                   placeholder="••••"
                   inputMode="numeric"
                   autoFocus
-                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-amber-400/50 focus:outline-none"
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950/60 px-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-white placeholder:text-slate-600 focus:border-orange-400/50 focus:outline-none"
                 />
                 <Button
                   type="button"
                   onClick={() => onStatus("completed", otp)}
                   disabled={otp.length !== 4}
-                  className="h-11 shrink-0 bg-emerald-500 px-4 text-emerald-950 hover:bg-emerald-400"
+                  className="h-11 shrink-0 bg-amber-500 px-4 text-amber-950 hover:bg-amber-400"
                 >
                   <CheckCircle2 className="size-4" /> Complete trip
                 </Button>
@@ -1106,7 +1106,7 @@ function DriverRideCard({
           )}
           {(ride.status === "matched" || ride.status === "in_progress") && !scheduled && (
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
-              <Zap className="size-3 text-emerald-300" />
+              <Zap className="size-3 text-amber-300" />
               {ride.status === "matched"
                 ? "Driving to pickup — your customer sees you move live"
                 : "On the way — the customer is tracking you in real time"}
@@ -1120,12 +1120,12 @@ function DriverRideCard({
           <button
             type="button"
             onClick={() => setChatOpen(!chatOpen)}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-emerald-300"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-200 transition-colors hover:text-amber-300"
           >
-            <MessageSquare className="size-4 text-emerald-300" />
+            <MessageSquare className="size-4 text-amber-300" />
             Message the customer
           </button>
-          <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-300">
+          <span className="flex items-center gap-1 text-[10px] font-medium text-amber-300">
             <Wallet className="size-3" /> {formatINR(ride.fare)}
           </span>
         </div>

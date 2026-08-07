@@ -60,7 +60,7 @@ export function TripHistory({
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-white">
-            <History className="size-4 text-emerald-300" />
+            <History className="size-4 text-amber-300" />
             Trip history
           </h1>
           <p className="mt-0.5 text-[11px] text-slate-400">
@@ -85,7 +85,7 @@ export function TripHistory({
             className={cn(
               "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all",
               filter === f.id
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
                 : "border-white/10 bg-white/5 text-slate-400 hover:text-slate-200",
             )}
           >
@@ -124,12 +124,12 @@ export function TripHistory({
                   <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                     {perspective === "driver" && t.riderName ? (
                       <span className="flex items-center gap-1.5 text-slate-300 normal-case">
-                        <MapPin className="size-3 text-emerald-300" />
+                        <MapPin className="size-3 text-amber-300" />
                         {t.riderName}
                       </span>
                     ) : t.driverName ? (
                       <span className="flex items-center gap-1.5 text-slate-300 normal-case">
-                        <CarFront className="size-3 text-emerald-300" />
+                        <CarFront className="size-3 text-amber-300" />
                         {t.driverName}
                       </span>
                     ) : null}
@@ -141,7 +141,7 @@ export function TripHistory({
                     className={cn(
                       "shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                       done
-                        ? "bg-emerald-400/15 text-emerald-300"
+                        ? "bg-amber-400/15 text-amber-300"
                         : cancelled
                           ? "bg-rose-400/15 text-rose-300"
                           : "bg-white/10 text-slate-400",
@@ -153,7 +153,7 @@ export function TripHistory({
 
                 <div className="mt-2 space-y-1.5 text-[12px]">
                   <p className="flex items-start gap-2 text-slate-300">
-                    <span className="mt-1 size-2 shrink-0 rounded-full bg-emerald-400" />
+                    <span className="mt-1 size-2 shrink-0 rounded-full bg-amber-400" />
                     <span className="truncate">{t.pickup.address}</span>
                   </p>
                   <p className="flex items-start gap-2 text-slate-300">
@@ -185,7 +185,7 @@ export function TripHistory({
 
                 {done && perspective === "driver" && (
                   <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-slate-950/40 px-2.5 py-1.5 text-[11px] ring-1 ring-white/5">
-                    <span className="flex items-center gap-1 font-semibold text-emerald-300">
+                    <span className="flex items-center gap-1 font-semibold text-amber-300">
                       <Wallet className="size-3" />
                       You earn {formatINR(driverSplit.driverShare)} · 75%
                     </span>
@@ -198,20 +198,20 @@ export function TripHistory({
                 <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2.5">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <CarFront className="size-3 text-emerald-300" />
+                      <CarFront className="size-3 text-amber-300" />
                       {vehicle.name}
                     </span>
                     <span className="text-[11px] text-slate-500">{formatKm(t.distanceKm)}</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     {done && t.paid && (
-                      <span className="flex items-center gap-1 rounded-md bg-emerald-400/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-300">
+                      <span className="flex items-center gap-1 rounded-md bg-amber-400/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
                         <Receipt className="size-3" />
                         {receiptId(t._id)}
                       </span>
                     )}
                     {done && !t.paid && (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-orange-300">
                         <XCircle className="size-3" /> Due
                       </span>
                     )}
@@ -227,7 +227,7 @@ export function TripHistory({
       )}
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
-        <CheckCircle2 className="size-3 text-emerald-300" />
+        <CheckCircle2 className="size-3 text-amber-300" />
         Receipts are numbered per trip and never change.
       </p>
     </div>

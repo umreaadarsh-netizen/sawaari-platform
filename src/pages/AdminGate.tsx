@@ -117,10 +117,10 @@ export default function AdminGate() {
     return (
       <div className="relative flex min-h-dvh items-center justify-center bg-[#05070d]">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-[380px] w-[640px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[130px]" />
+          <div className="absolute -top-32 left-1/2 h-[380px] w-[640px] -translate-x-1/2 rounded-full bg-amber-500/10 blur-[130px]" />
           <div className="grain absolute inset-0" />
         </div>
-        <Loader2 className="relative size-6 animate-spin text-emerald-300" />
+        <Loader2 className="relative size-6 animate-spin text-amber-300" />
       </div>
     );
   }
@@ -153,8 +153,8 @@ export default function AdminGate() {
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[#05070d] px-4">
       {/* ambient night background */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[460px] w-[760px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-[150px]" />
-        <div className="absolute bottom-0 -left-32 h-[340px] w-[340px] rounded-full bg-teal-500/[0.06] blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 h-[460px] w-[760px] -translate-x-1/2 rounded-full bg-amber-500/10 blur-[150px]" />
+        <div className="absolute bottom-0 -left-32 h-[340px] w-[340px] rounded-full bg-orange-500/[0.06] blur-[120px]" />
         <div className="absolute -right-24 top-1/3 h-[300px] w-[300px] rounded-full bg-sky-500/[0.06] blur-[110px]" />
         <div className="grain absolute inset-0" />
       </div>
@@ -181,7 +181,7 @@ export default function AdminGate() {
 
       <div className="relative z-10 flex flex-1 items-center justify-center pb-16">
         <div className="w-full max-w-[400px]">
-          <div className="absolute -inset-1 -z-10 rounded-[2rem] bg-gradient-to-br from-emerald-400/20 via-transparent to-teal-400/20 blur-lg" />
+          <div className="absolute -inset-1 -z-10 rounded-[2rem] bg-gradient-to-br from-amber-400/20 via-transparent to-orange-400/20 blur-lg" />
           <div
             key={shakeKey}
             className={cn(
@@ -199,7 +199,7 @@ export default function AdminGate() {
             <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
 
             <div className="flex flex-col items-center text-center">
-              <span className="grid size-14 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/30">
+              <span className="grid size-14 place-items-center rounded-2xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/30">
                 <ShieldCheck className="size-7" />
               </span>
               <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-white">
@@ -212,7 +212,7 @@ export default function AdminGate() {
             </div>
 
             <form onSubmit={(e) => void handleUnlock(e)} className="mt-6">
-              <div className="flex h-12 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-emerald-400/40">
+              <div className="flex h-12 items-center rounded-full border border-white/10 bg-white/[0.05] pl-4 transition-colors focus-within:border-amber-400/40">
                 <KeyRound className="size-4 shrink-0 text-slate-500" />
                 <Input
                   type={show ? "text" : "password"}
@@ -229,7 +229,7 @@ export default function AdminGate() {
                 <button
                   type="button"
                   onClick={() => setShow((s) => !s)}
-                  className="mr-2 rounded-full p-1.5 text-slate-400 transition-colors hover:text-emerald-300"
+                  className="mr-2 rounded-full p-1.5 text-slate-400 transition-colors hover:text-amber-300"
                   aria-label={show ? "Hide password" : "Show password"}
                 >
                   {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -243,7 +243,7 @@ export default function AdminGate() {
               <Button
                 type="submit"
                 disabled={submitting || !password}
-                className="mt-5 h-12 w-full rounded-full bg-emerald-400 text-[15px] font-semibold text-emerald-950 hover:bg-emerald-300"
+                className="mt-5 h-12 w-full rounded-full bg-amber-400 text-[15px] font-semibold text-amber-950 hover:bg-amber-300"
               >
                 {submitting ? (
                   <>
