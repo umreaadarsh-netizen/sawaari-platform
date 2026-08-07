@@ -631,3 +631,59 @@ test("the 5 km matching radius is inclusive: 5.0 km is broadcast, 5.01 km is not
   expect(matched?.status).toBe("matched");
   expect(matched?.driverId).toBe(driverId);
 });
+
+test("a ride vanishes from every other driver's feed the moment one accepts it", async () => {
+  const { t, rider, driver } = await setup();
+  await onboardDriver(driver);
+
+  // A second, online driver parked right next to the first — also in radius.
+  const rivalId = await t.run(async (ctx) =>
+    ctx.db.insert("users", {
+      name: "Rival Driver",
+      email: "rival@example.com",
+      role: "user",
+    }),
+  );
+  const rival = t.withIdentity({
+    subject: `${rivalId}|rival-session`,
+    name: "Rival Driver",
+    email: "rival@example.com",
+  });
+  await rival.mutation(api.drivers.saveProfile, {
+    name: "Rival Driver",
+    vehicleNo: "MP42EV7777",
+  });
+  await rival.mutation(api.drivers.setOnline, { online: true });
+  await rival.mutation(api.drivers.updateLocation, {
+    lat: PICKUP.lat,
+    lng: PICKUP.lng,
+  });
+
+  const rideId = await rider.mutation(api.rides.requestRide, {
+    pickup: PICKUP,
+    dropoff: DROPOFF,
+    vehicleType: "classic",
+  });
+
+  // Both in-radius, online drivers see the fresh request in their feeds.
+  const firstFeed = await driver.query(api.rides.openRides, {});
+  const rivalFeed = await rival.query(api.rides.openRides, {});
+  expect(firstFeed.map((r) => r._id)).toContain(rideId);
+  expect(rivalFeed.map((r) => r._id)).toContain(rideId);
+
+  // The first driver accepts — the ride flips to `matched` and leaves the
+  // `requested` pool, so the rival's broadcast feed empties immediately.
+  await driver.mutation(api.rides.acceptRide, { rideId });
+  const rivalFeedAfter = await rival.query(api.rides.openRides, {});
+  expect(rivalFeedAfter.map((r) => r._id)).not.toContain(rideId);
+  expect(rivalFeedAfter).toHaveLength(0);
+
+  // Defense in depth: the rival can't grab the locked ride either.
+  await expect(
+    rival.mutation(api.rides.acceptRide, { rideId }),
+  ).rejects.toThrow("Another driver already took this ride.");
+
+  // The ride is now matched to the winning driver.
+  const taken = await rider.query(api.rides.getRide, { rideId });
+  expect(taken?.status).toBe("matched");
+});
