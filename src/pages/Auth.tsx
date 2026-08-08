@@ -345,7 +345,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <SawaariMark className="size-12" />
             </button>
             <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight text-white">
-              {title}
+              {title === "Sign in to Sawaari" ? (
+                <>
+                  Sign in to{" "}
+                  <span className="bg-gradient-to-r from-amber-200 to-orange-300 bg-clip-text text-transparent">
+                    Sawaari
+                  </span>
+                </>
+              ) : (
+                title
+              )}
             </h1>
             <p className="mt-1.5 font-serif text-base italic text-slate-400">
               {subtitle}
@@ -429,7 +438,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                 </div>
                 <Button
                   type="submit"
-                  className="glass-strong h-12 shrink-0 rounded-full px-5 font-semibold text-white hover:bg-white/15"
+                  className="h-12 shrink-0 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
                   disabled={isLoading || phone.replace(/\D/g, "").length < 10}
                 >
                   {isLoading ? (
@@ -517,7 +526,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
 
               <Button
                 type="submit"
-                className="mt-5 h-12 w-full rounded-full bg-amber-400 text-amber-950 hover:bg-amber-300"
+                className="mt-5 h-12 w-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
                 disabled={isLoading || phoneOtp.length !== 6}
               >
                 {isLoading ? (
@@ -567,7 +576,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   variant="outline"
                   size="icon"
                   disabled={isLoading}
-                  className="glass-strong size-12 shrink-0 rounded-full text-amber-300 hover:bg-white/15 hover:text-amber-200"
+                  className="size-12 shrink-0 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
                 >
                   {isLoading ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -626,7 +635,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               </p>
               <Button
                 type="submit"
-                className="mt-5 h-12 w-full rounded-full bg-amber-400 text-amber-950 hover:bg-amber-300"
+                className="mt-5 h-12 w-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
                 disabled={isLoading || emailOtp.length !== 6}
               >
                 {isLoading ? (
@@ -666,7 +675,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 w-full rounded-full border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white"
+                className="h-11 w-full rounded-full border-white/10 bg-white/5 text-slate-200 transition-colors hover:border-amber-300/30 hover:bg-amber-400/10 hover:text-white"
                 onClick={handleGuestLogin}
                 disabled={isLoading}
               >
