@@ -1,1 +1,0 @@
-import{c}from"./index-DxAXrcJ7.js";const e=[["path",{d:"M12 6v6l4 2",key:"mmk7yg"}],["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}]],a=c("clock",e);const o=[["path",{d:"m21 21-4.34-4.34",key:"14j7rj"}],["circle",{cx:"11",cy:"11",r:"8",key:"4ej97u"}]],t=c("search",o);export{a as C,t as S};
