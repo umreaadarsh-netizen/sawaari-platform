@@ -103,7 +103,7 @@ function Nav() {
         </div>
         <Link
           to="/auth?returnTo=%2Fapp%2Frider"
-          className="shrink-0 rounded-lg bg-white px-6 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-100"
+          className="shrink-0 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-6 py-2 text-sm font-medium text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
         >
           Book a Ride
         </Link>
@@ -142,7 +142,14 @@ function Hero() {
             style={{ letterSpacing: "-0.04em" }}
           >
             {HERO_LINES.map((line, lineIndex) => (
-              <span key={lineIndex} className="block">
+              <span
+                key={lineIndex}
+                className={cn(
+                  "block",
+                  lineIndex === 1 &&
+                    "bg-gradient-to-r from-amber-200 via-amber-300 to-orange-300 bg-clip-text text-transparent",
+                )}
+              >
                 {line.split("").map((ch, charIndex) => (
                   <motion.span
                     key={charIndex}
@@ -183,13 +190,13 @@ function Hero() {
           >
             <Link
               to="/auth?returnTo=%2Fapp%2Frider"
-              className="rounded-lg bg-white px-8 py-3 font-medium text-black transition-colors hover:bg-gray-100"
+              className="rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 px-8 py-3 font-medium text-amber-950 shadow-lg shadow-amber-500/30 transition-all hover:from-amber-300 hover:to-orange-400 hover:shadow-amber-400/40"
             >
               Book Now
             </Link>
             <Link
               to="/auth?returnTo=%2Fapp%2Fdriver"
-              className="liquid-glass rounded-lg border border-white/20 px-8 py-3 font-medium text-white transition-colors hover:bg-white hover:text-black"
+              className="liquid-glass rounded-lg border border-amber-300/25 px-8 py-3 font-medium text-white transition-colors hover:border-amber-300/50 hover:bg-amber-400/10"
             >
               Driver Portal
             </Link>
@@ -202,8 +209,9 @@ function Hero() {
           transition={{ duration: 1, delay: 1.4 }}
           className="flex items-end justify-start pt-10 lg:justify-end lg:pt-0"
         >
-          <div className="liquid-glass rounded-xl border border-white/20 px-6 py-3">
-            <p className="text-lg font-light text-white md:text-xl lg:text-2xl">
+          <div className="liquid-glass rounded-xl border border-amber-300/25 px-6 py-3 shadow-lg shadow-amber-500/10">
+            <p className="flex items-center gap-2.5 text-lg font-light text-white md:text-xl lg:text-2xl">
+              <Zap className="size-5 shrink-0 text-amber-300" />
               Zero Emission. Electric. Seamless.
             </p>
           </div>
@@ -458,7 +466,7 @@ function LocalRoutes() {
               </div>
 
               <Link to="/auth?returnTo=%2Fapp%2Frider" className="mt-6 block">
-                <Button className="glass-strong h-12 w-full rounded-full text-[15px] font-semibold text-white hover:bg-white/15">
+                <Button className="h-12 w-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400">
                   Book this route <ArrowUpRight className="size-4" />
                 </Button>
               </Link>
@@ -497,7 +505,7 @@ function Capabilities() {
   return (
     <section id="rides" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           Capabilities
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -546,7 +554,7 @@ function FleetSection() {
   return (
     <section id="fleet" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           The fleet
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -605,7 +613,7 @@ function FleetSection() {
               <Link to="/auth?returnTo=%2Fapp%2Frider">
                 <Button
                   size="sm"
-                  className="glass-strong h-9 rounded-full px-4 text-white hover:bg-white/15"
+                  className="h-9 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400"
                 >
                   Book <ArrowUpRight className="size-3.5" />
                 </Button>
@@ -644,7 +652,7 @@ function HowItWorks() {
   return (
     <section id="how" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           How it works
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -702,7 +710,7 @@ function DriverSection() {
     <section id="drivers" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8">
       <div className="grid items-center gap-12 lg:grid-cols-2">
         <motion.div {...fadeUp}>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+          <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
             For drivers
           </p>
           <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -737,7 +745,7 @@ function DriverSection() {
           <Link to="/auth?returnTo=%2Fapp%2Fdriver" className="mt-8 inline-block">
             <Button
               size="lg"
-              className="glass-strong h-12 rounded-full px-7 text-[15px] font-semibold text-white hover:bg-white/15"
+              className="h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-7 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
             >
               <CarFront className="size-4" />
               Become a driver
@@ -823,7 +831,7 @@ function Faq() {
   return (
     <section id="faq" className="relative mx-auto max-w-3xl px-5 py-24 sm:px-8">
       <motion.div {...fadeUp} className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+        <p className="glass-chip inline-flex rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
           FAQ
         </p>
         <h2 className="mt-4 font-serif text-4xl italic leading-[1.08] tracking-tight text-white sm:text-5xl">
@@ -879,7 +887,7 @@ function FinalCta() {
           <Link to="/auth?returnTo=%2Fapp%2Frider">
             <Button
               size="lg"
-              className="glass-strong h-12 rounded-full px-8 text-[15px] font-semibold text-white hover:bg-white/15"
+              className="h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-8 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
             >
               Book a Sawaari <ArrowUpRight className="size-4" />
             </Button>
