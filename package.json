@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:preview": "node scripts/preview-cta-e2e.mjs"
   },
   "dependencies": {
     "@convex-dev/auth": "^0.0.90",
