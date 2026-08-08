@@ -765,7 +765,7 @@ function BookingView(props: {
           size="lg"
           disabled={!farePreview || requesting}
           onClick={props.onRequest}
-          className="w-full bg-amber-500 py-6 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400"
+          className="w-full bg-gradient-to-r from-amber-400 to-orange-500 py-6 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
         >
           {requesting ? (
             <>
@@ -1436,7 +1436,7 @@ function CheckoutCard({
           type="button"
           onClick={() => void handlePay()}
           disabled={paying}
-          className="mt-auto w-full bg-amber-500 py-5 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400"
+          className="mt-auto w-full bg-gradient-to-r from-amber-400 to-orange-500 py-5 text-[15px] font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
         >
           {paying ? (
             <>
@@ -1556,7 +1556,7 @@ function RateDriverModal({
           type="button"
           onClick={() => void handleSubmit()}
           disabled={stars < 1 || submitting}
-          className="mt-4 w-full bg-amber-500 py-4 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400"
+          className="mt-4 w-full bg-gradient-to-r from-amber-400 to-orange-500 py-4 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
         >
           {submitting ? (
             <>

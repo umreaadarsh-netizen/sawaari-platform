@@ -437,7 +437,7 @@ export default function DriverDashboard() {
                     type="button"
                     onClick={() => void handleSaveProfile()}
                     disabled={savingProfile || !form.name.trim() || !form.vehicleNo.trim()}
-                    className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
+                    className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
                   >
                     {savingProfile ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -505,7 +505,7 @@ export default function DriverDashboard() {
                           type="button"
                           onClick={() => void handleSavePhone()}
                           disabled={savingPhone}
-                          className="shrink-0 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-bold text-amber-950 transition-colors hover:bg-amber-400 disabled:opacity-60"
+                          className="shrink-0 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1 text-[11px] font-bold text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400 disabled:opacity-60"
                         >
                           {savingPhone ? (
                             <Loader2 className="size-3 animate-spin" />
@@ -653,7 +653,7 @@ export default function DriverDashboard() {
                         disabled={
                           payoutBusy || (wallet?.driverEarnings ?? 0) < 50
                         }
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-xs font-bold text-amber-950 transition-colors hover:bg-amber-400 disabled:opacity-50"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-3 text-xs font-bold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400 disabled:opacity-50"
                       >
                         {payoutBusy ? (
                           <>
@@ -913,7 +913,7 @@ export default function DriverDashboard() {
                                       void handleAccept(r._id);
                                     }
                                   }}
-                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-amber-950 transition-all hover:bg-amber-400 active:scale-95"
+                                  className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1.5 text-[11px] font-bold text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400 active:scale-95"
                                 >
                                   Accept <ArrowUpCircle className="size-3.5 rotate-45" />
                                 </span>
@@ -1041,7 +1041,7 @@ function DriverRideCard({
             <Button
               type="button"
               onClick={() => onStatus("arriving")}
-              className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
+              className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
             >
               <Flag className="size-4" /> Arrived at pickup
             </Button>
@@ -1068,7 +1068,7 @@ function DriverRideCard({
                   type="button"
                   onClick={() => onStatus("in_progress", otp)}
                   disabled={otp.length !== 4}
-                  className="h-11 shrink-0 bg-amber-500 px-4 text-amber-950 hover:bg-amber-400"
+                  className="h-11 shrink-0 bg-gradient-to-r from-amber-400 to-orange-500 px-4 text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400"
                 >
                   <Play className="size-4" /> Start trip
                 </Button>
@@ -1097,7 +1097,7 @@ function DriverRideCard({
                   type="button"
                   onClick={() => onStatus("completed", otp)}
                   disabled={otp.length !== 4}
-                  className="h-11 shrink-0 bg-amber-500 px-4 text-amber-950 hover:bg-amber-400"
+                  className="h-11 shrink-0 bg-gradient-to-r from-amber-400 to-orange-500 px-4 text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400"
                 >
                   <CheckCircle2 className="size-4" /> Complete trip
                 </Button>

@@ -46,7 +46,7 @@ function CardForm({ amount, onSuccess }: { amount: number; onSuccess: () => void
       <Button
         type="submit"
         disabled={!stripe || !elements || paying || done}
-        className="w-full bg-amber-500 py-4 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-500/25 hover:bg-amber-400 disabled:opacity-60"
+        className="w-full bg-gradient-to-r from-amber-400 to-orange-500 py-4 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400 disabled:opacity-60"
       >
         {done ? (
           <>

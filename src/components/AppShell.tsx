@@ -37,6 +37,7 @@ export function AppShell({
 
   return (
     <header className="relative z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950/70 px-4 backdrop-blur-xl sm:px-6">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
       <div className="flex items-center gap-3">
         <button
           type="button"

@@ -514,7 +514,7 @@ function FleetRow({ vehicle }: { vehicle: FleetVehicle }) {
             size="sm"
             disabled={!dirty || saving}
             onClick={() => void handleSave()}
-            className="w-full bg-amber-500 text-amber-950 hover:bg-amber-400"
+            className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-lg shadow-amber-500/25 transition-all hover:from-amber-300 hover:to-orange-400"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : "Save changes"}
           </Button>

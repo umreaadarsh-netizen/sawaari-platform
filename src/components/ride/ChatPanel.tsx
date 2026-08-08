@@ -105,7 +105,7 @@ export function ChatPanel({
           size="icon"
           onClick={() => void handleSend()}
           disabled={!draft.trim() || sending}
-          className="shrink-0 bg-amber-500 text-amber-950 hover:bg-amber-400"
+          className="shrink-0 bg-gradient-to-r from-amber-400 to-orange-500 text-amber-950 shadow-md shadow-amber-500/20 transition-all hover:from-amber-300 hover:to-orange-400"
           aria-label="Send message"
         >
           <Send className="size-4" />
