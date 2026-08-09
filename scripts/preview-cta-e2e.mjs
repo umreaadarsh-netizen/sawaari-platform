@@ -4,17 +4,21 @@
  *
  * Drives system Chrome (headless) against the real deployed preview and
  * asserts the ACTUAL COMPUTED styles of the amber→orange gradient CTAs on
- * the rider and driver dashboards — the live-preview complement to the
- * class-assertion smoke tests in src/pages/*.test.tsx.
+ * the landing page, the auth page, and the rider and driver dashboards —
+ * the live-preview complement to the class-assertion smoke tests in
+ * src/pages/*.test.tsx.
  *
  * Unlike the unit tests, this one:
  *   - WAITS for the preview to become healthy (no more "Loading app preview"
  *     interstitial) before running — see PREVIEW_WAIT_MS below.
  *   - Is frame-aware: Playwright locators pierce the Freebuff preview
  *     wrapper iframes automatically.
- *   - Signs in through the real demo phone-OTP flow (code surfaced on-card),
- *     picks real locations via the Nominatim suggestion dropdown, and reads
- *     getComputedStyle() on each CTA.
+ *   - Checks the landing page CTAs (nav Book a Ride, hero Book Now,
+ *     Book this route, fleet Book, Become a driver, Book a Sawaari) and the
+ *     auth page CTAs (Send OTP, email submit arrow, Verify & continue),
+ *     then signs in through the real demo phone-OTP flow (code surfaced
+ *     on-card), picks real locations via the Nominatim suggestion dropdown,
+ *     and reads getComputedStyle() on each dashboard CTA.
  *
  * Usage:
  *   PREVIEW_URL=https://<preview>/ node scripts/preview-cta-e2e.mjs
@@ -112,7 +116,7 @@ function alphaOf(colorStr) {
   return Number.isFinite(a) ? a : null;
 }
 
-async function signIn(page, roleText, phone) {
+async function signIn(page, roleText, phone, onOtpStep) {
   await page.goto(`${BASE}/auth`, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.getByText(roleText, { exact: true }).first().click({ timeout: 20000 });
   await page.getByPlaceholder("Mobile number").fill(phone);
@@ -125,6 +129,7 @@ async function signIn(page, roleText, phone) {
     if (m) code = m[1];
   }
   if (!code) throw new Error("demo OTP banner not found");
+  if (onOtpStep) await onOtpStep(page);
   const slots = page.locator("input[inputmode='numeric']");
   if ((await slots.count()) < 6) throw new Error(`OTP slots missing: ${await slots.count()}`);
   for (let i = 0; i < 6; i++) await slots.nth(i).fill(code[i]);
@@ -220,9 +225,84 @@ const { chromium } = require(pwPath);
     return;
   }
 
+  // ---- FLOW 0: landing page gradient CTAs ----
+  try {
+    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(3000); // hero video + motion settle
+    const landingCtAs = [
+      { role: "link", name: "Book a Ride", slug: "nav-book-ride" },
+      { role: "link", name: "Book Now", slug: "hero-book-now" },
+      { role: "button", name: "Book this route", slug: "route-book" },
+      { role: "button", name: "Book", slug: "fleet-book" },
+      { role: "button", name: "Become a driver", slug: "driver-cta" },
+      { role: "button", name: "Book a Sawaari", slug: "final-cta" },
+    ];
+    for (const cta of landingCtAs) {
+      const loc = page.getByRole(cta.role, { name: cta.name, exact: true }).first();
+      const st = await computed(loc);
+      check(
+        `landing.${cta.slug}.gradient`,
+        isGradient(st.bgImage),
+        { bgImage: st.bgImage, cls: st.cls },
+      );
+      check(
+        `landing.${cta.slug}.dark-text`,
+        st.color !== "rgb(255, 255, 255)",
+        { color: st.color },
+      );
+    }
+    await page.screenshot({ path: "/tmp/sawaari-landing.png" }).catch(() => {});
+  } catch (e) {
+    check("landing.flow", false, { error: String(e).slice(0, 200) });
+  }
+
+  // ---- FLOW 0b: auth page gradient CTAs (start state) ----
+  try {
+    await page.goto(`${BASE}/auth`, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(2000);
+    const sendOtp = page.getByRole("button", { name: "Send OTP" });
+    const sendStyle = await computed(sendOtp);
+    check(
+      "auth.send-otp.gradient",
+      isGradient(sendStyle.bgImage),
+      { bgImage: sendStyle.bgImage, cls: sendStyle.cls },
+    );
+    check(
+      "auth.send-otp.dark-text",
+      sendStyle.color !== "rgb(255, 255, 255)",
+      { color: sendStyle.color },
+    );
+
+    // email submit arrow button (icon-only; locate via the form)
+    await page.getByRole("button", { name: "Email OTP" }).click();
+    await page.waitForTimeout(500);
+    const emailStyle = await computed(page.locator('form button[type="submit"]'));
+    check(
+      "auth.email-submit.gradient",
+      isGradient(emailStyle.bgImage),
+      { bgImage: emailStyle.bgImage, cls: emailStyle.cls },
+    );
+    await page.screenshot({ path: "/tmp/sawaari-auth.png" }).catch(() => {});
+  } catch (e) {
+    check("auth.flow", false, { error: String(e).slice(0, 200) });
+  }
+
   // ---- FLOW 1: rider dashboard ----
   try {
-    await signIn(page, "Book a rickshaw", RIDER_PHONE);
+    await signIn(page, "Book a rickshaw", RIDER_PHONE, async (p) => {
+      // at the OTP step the demo banner is up and Verify & continue is rendered
+      const st = await computed(p.getByRole("button", { name: /Verify & continue/ }));
+      check(
+        "auth.verify-otp.gradient",
+        isGradient(st.bgImage),
+        { bgImage: st.bgImage, cls: st.cls },
+      );
+      check(
+        "auth.verify-otp.dark-text",
+        st.color !== "rgb(255, 255, 255)",
+        { color: st.color },
+      );
+    });
   } catch (e) {
     check("rider.signin", false, { error: String(e).slice(0, 200) });
   }
